@@ -14,6 +14,30 @@ Shared files excluded from BOTH write scopes, and why:
 - `wads/` (the Blasphemer wad). It is the test data the demo check depends on. An agent that changes it could make a broken build look like it passes.
 - `docs/smoke_tests/agent-summary.md` (the 1.1 evidence) and this `session_tasks.md` (the scope definition, edited only by me).
 
+## Setup Verification
+
+Why the isolation is scoped this way: each session gets its own worktree on its own branch, and each container mounts only that worktree at `/workspace`. If both agents shared one directory, Session B's build output and Session A's spec would land in the same working tree, one agent could overwrite or "clean up" the other's files mid-run, and `git status` could no longer tell me which agent changed what, so I couldn't review or merge each session on its own. Both containers share only the `claude-auth` volume for login, never my home directory.
+
+`git worktree list` (before the sessions):
+```
+/home/george/Documents/agentic-engineer-course/capstone/gimpl         601ed78a [master]
+/home/george/Documents/agentic-engineer-course/capstone/gimpl-agent-a 601ed78a [feature/port-spec-givebody-givearmor]
+/home/george/Documents/agentic-engineer-course/capstone/gimpl-agent-b 601ed78a [feature/demo1-check-script]
+```
+
+`git branch` in each worktree (`*` marks the checked-out branch):
+```
+gimpl-agent-a: * feature/port-spec-givebody-givearmor
+gimpl-agent-b: * feature/demo1-check-script
+```
+
+`ls /workspace` in each container: both show the full project tree and `session_tasks.md`. Only Session B's container shows `wads/`, because I copied the gitignored wad into that worktree alone, which confirms each container is mounted to a different host directory.
+
+Launch command (run from inside each worktree):
+```
+docker run -it --rm -v "${PWD}:/workspace" -v claude-auth:/claude-auth gimpl
+```
+
 ## Session A
 
 Branch name: feature/port-spec-givebody-givearmor
