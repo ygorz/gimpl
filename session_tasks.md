@@ -1,0 +1,35 @@
+# Parallel Agent Session Tasks
+
+Two tasks run in parallel on GIMPL (Chocolate Heretic). Neither one changes game source, and their write scopes are separate files in separate folders, so the branches should merge without conflicts.
+
+Why these two are safe to run side by side:
+- Session A only reads C source and writes one new Markdown file under `docs/port-specs/`.
+- Session B only writes one new script under `scripts/` and one new results file under `docs/smoke-tests/`.
+- Neither write list includes a file the other session writes, and both sessions are barred from the shared files listed below.
+
+Shared files excluded from BOTH write scopes, and why:
+- `src/**` (all game and engine source). The demo check is only trustworthy if no session changes the code it measures, and the stay-C fence (renderer `r_*`, `z_zone`, `p_tick.c`, `d_net`, `s_sound`, `p_saveg`, `p_setup.c`, `src/m_fixed.c`) lives here.
+- `Dockerfile`, `docker-entrypoint.sh`, `settings.json`, `statusline.sh`, `setup.md`. These define the sandbox both sessions run in.
+- `.gitignore`, `configure.ac`, `Makefile.am`, `CMakeLists.txt`. Build and ignore rules are shared by every branch.
+- `wads/` (the Blasphemer wad). It is the test data the demo check depends on. An agent that changes it could make a broken build look like it passes.
+- `docs/smoke-tests/agent-summary.md` (the 1.1 evidence) and this `session_tasks.md` (the scope definition, edited only by me).
+
+## Session A
+
+Branch name: feature/port-spec-givebody-givearmor
+Worktree directory: ../gimpl-agent-a
+Task: Write a port spec for `P_GiveBody` and `P_GiveArmor` in `src/heretic/p_inter.c`, two small functions planned for a later port. For each function, document its C signature, what it returns and when, every `player_t` field and global it reads or writes, the constants it depends on (for example the max health and armor values), and every call site in `src/heretic` with file and line number, including which pickups trigger it.
+Files or folders the agent may write to: `docs/port-specs/p_inter-givebody-givearmor.md` (new file, the only write)
+Files or folders the agent may read but not write to: `src/heretic/p_inter.c`, `src/heretic/doomdef.h`, `src/heretic/p_local.h`, `src/heretic/info.h`, and any other file under `src/` it needs to trace a type or constant
+Commands the agent may run: `ls`, `cat`, `grep`, `rg`, `wc`, `head`, `sed -n` (read-only commands only; no build, no git, no edits under `src/`)
+Definition of done: `docs/port-specs/p_inter-givebody-givearmor.md` exists and contains, for both functions, the exact C signature, the return-value rules, a table of every field read and every field written, the constants used with their values and where they are defined, and a list of call sites with file and line numbers that I can spot-check against `p_inter.c`. `git status` in the worktree shows that file as the only change.
+
+## Session B
+
+Branch name: feature/demo1-check-script
+Worktree directory: ../gimpl-agent-b
+Task: Write a repeatable DEMO1 check script. It verifies the wad's sha256 before playing, runs the headless DEMO1 timedemo, and passes only if the game reports the expected 4227 gametics. The game normally exits with code 255 after a timedemo, so the script must judge the result from the `timed` line, not the game's exit code. Then run it and record the results.
+Files or folders the agent may write to: `scripts/demo1-check.sh` (new file), `docs/smoke-tests/demo1-check.md` (new file). The build also writes object files and `src/chocolate-heretic`, which are gitignored build outputs, not source edits.
+Files or folders the agent may read but not write to: `setup.md`, `docs/smoke-tests/agent-summary.md`, `wads/blasphem.wad`, `src/` (to find the built binary), `autogen.sh`, `Makefile.am`
+Commands the agent may run: `./autogen.sh`, `make -j$(nproc)`, `sha256sum`, `chmod +x scripts/demo1-check.sh`, `bash scripts/demo1-check.sh`, `src/chocolate-heretic -iwad wads/blasphem.wad -timedemo demo1 -nodraw -nosound`, `ls`, `cat`, `grep`
+Definition of done: `scripts/demo1-check.sh` exists and is executable. It exits non-zero with a clear message if `wads/blasphem.wad` is missing or its sha256 is not `e9ed3f53cb011f1ae897b66fcfe46692c8c2d73e147bbe1e36a9bf1f79a4cc63`. On the real build it prints PASS with the exact `timed` line and exits 0. Run with `EXPECTED_TICS=1` it prints FAIL and exits non-zero. `docs/smoke-tests/demo1-check.md` contains the pasted output and exit codes of both runs. `git status` in the worktree shows only those two new files.
