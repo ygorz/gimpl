@@ -8,6 +8,10 @@
 
 set -u
 
+# Always run headless: no window or sound device, same as the container
+export SDL_VIDEODRIVER=dummy
+export SDL_AUDIODRIVER=dummy
+
 EXPECTED_TICS="${EXPECTED_TICS:-4227}"
 WAD_SHA256="e9ed3f53cb011f1ae897b66fcfe46692c8c2d73e147bbe1e36a9bf1f79a4cc63"
 
