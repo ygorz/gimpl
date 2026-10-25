@@ -46,8 +46,24 @@ Rules: only create files under docs/build-warnings/. Do not edit any source file
 
 ## Final state after merge
 
-Output of `git log --oneline --graph -15` on `master` after both lab branches were merged:
+Output of `git log --oneline` on `master` after both lab branches were merged. The repo is a fork of Chocolate Doom, so the full output is 5,427 commits of upstream history. The top 12 lines below cover this lab plus the 1.3 exercise it builds on.
 
 ```
-(added after both merges)
+a0fe17ed Merge lab1/build-warnings-report: build-warnings report T2-001
+d1914791 Merge lab1/demo1-check-run003: DEMO1 check Run 003
+ded8388d docs: log lab Run 003 of DEMO1 check workflow
+1b19f4ca docs: revise DEMO1 check PRD for per-run results file and host-side git checks
+598d96d5 docs: add build-warnings report and log run T2-001
+6e5e6ae3 docs: add PRD, rubric, and iteration log for build-warnings lab task
+a646c3d6 Merge feature/quality-baseline: 1.3 PRD, rubric, and iteration log
+4b83a10c docs: log Run 002 for DEMO1 check agent
+331e3a0e docs: log Run 001 baseline for DEMO1 check agent
+d06a6c81 docs: add iteration log for DEMO1 check agent
+a974fbbe docs: add rubric and scoring guide for DEMO1 check agent
+c9b1c655 docs: add PRD for DEMO1 check agent
 ```
+
+**What it shows:**
+- `6e5e6ae3` committed the Task 2 PRD, rubric, and pass threshold on `master` before either branch existed, so the quality bar was set before any run.
+- Each task has its own branch, named for the task, with its own commits: `598d96d5` on `lab1/build-warnings-report`, and `1b19f4ca` and `ded8388d` on `lab1/demo1-check-run003`.
+- Two `--no-ff` merge commits (`d1914791` and `a0fe17ed`) bring both branches into `master`. Both merged with the `ort` strategy and no conflicts, because the two branches changed no files in common: Task 2 only touched `docs/build-warnings/`, and Task 1 only touched its own PRD, rubric, log, and results file.
