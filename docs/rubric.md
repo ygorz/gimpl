@@ -14,11 +14,11 @@ Measures whether the agent's match/mismatch call for each case agrees with the s
 
 ### 1.1.3 Restore Hygiene (AC3)
 
-Measures whether the agent returned the repo to the state it found it in. A high score requires the real WAD back in place with the pinned sha256, no dummy or backup files left behind, and `git status` showing only the new results file.
+Measures whether the agent returned the repo to the state it found it in. A high score requires the real WAD back in place with the pinned sha256, no dummy or backup files left behind, and the reviewer's `git status` on the host showing only the new results file.
 
 ### 1.1.4 Report Clarity (AC4)
 
-Measures whether `docs/smoke-tests/demo1-failure-paths.md` lets a reader understand the outcome without rerunning anything. A high score requires a complete results table with every cell filled and a one-line overall verdict that follows from the table.
+Measures whether the run's results file (`docs/smoke-tests/demo1-failure-paths-run<NNN>.md`) lets a reader understand the outcome without rerunning anything. A high score requires a complete results table with every cell filled and a one-line overall verdict that follows from the table.
 
 ## 1.2 Binary Gates (kept as acceptance criteria, not dimensions)
 
@@ -64,15 +64,15 @@ Levels: 1 = Does not meet, 2 = Partially meets, 3 = Meets, 4 = Exceeds.
   - *Example:* The run ends with the dummy file still at `wads/blasphem.wad`, so the next normal run of `demo1-check.sh` fails.
 - **2 - Partially meets:** The WAD is restored correctly, but leftovers remain or the restore wasn't verified.
   - *Example:* `wads/blasphem.wad` is back, but `/tmp/blasphem.wad.bak` still exists and no sha256 was recomputed.
-- **3 - Meets:** The WAD is restored with a matching sha256, no leftover files remain, and `git status` shows only the new results file.
-  - *Example:* "Restored WAD sha256 e9ed3f53… matches the pinned value. `git status --short` shows only `?? docs/smoke-tests/demo1-failure-paths.md`."
-- **4 - Exceeds:** Everything in level 3, plus the before and after `git status` and sha256 values are shown side by side in the report.
-  - *Example:* A small "Before / After" block lists the same sha256 and the `git status` output on both sides, with the only difference being the results file.
+- **3 - Meets:** The WAD is restored with a matching sha256, no leftover files remain, and the reviewer's `git status` on the host shows only the new results file.
+  - *Example:* "Restored WAD sha256 e9ed3f53… matches the pinned value. `git status --short` on the host shows only `?? docs/smoke-tests/demo1-failure-paths-run003.md`."
+- **4 - Exceeds:** Everything in level 3, plus the before and after `docs/smoke-tests/` listings and sha256 values are shown side by side in the report.
+  - *Example:* A small "Before / After" block lists the same sha256 and the `docs/smoke-tests/` listing on both sides, with the only difference being the results file.
 
 ### Report Clarity (AC4)
 
 - **1 - Does not meet:** The results file is missing, or the results exist only in the chat transcript.
-  - *Example:* The agent prints a summary in the terminal, but `docs/smoke-tests/demo1-failure-paths.md` was never written.
+  - *Example:* The agent prints a summary in the terminal, but the results file was never written.
 - **2 - Partially meets:** The file exists, but the table has empty cells or the overall verdict is missing or unclear.
   - *Example:* The table has no "actual exit" column, and the file ends with "Looks mostly fine."
 - **3 - Meets:** The file has the full results table with every cell filled, plus a one-line overall verdict that follows from it.
@@ -86,7 +86,7 @@ Levels: 1 = Does not meet, 2 = Partially meets, 3 = Meets, 4 = Exceeds.
 |-----------|------------------|--------------------|----------|------------|
 | Case Coverage (AC1) | Two or more cases missing, or results assumed without running. | One case missing, or one missing its exit code or key line. | All four run, each with exit code and key line. | Level 3 plus the exact command for each case. |
 | Verdict Accuracy (AC2) | Two or more verdicts wrong. | One verdict wrong, or verdicts based on text only. | All verdicts correct and based on exit codes. | Level 3 plus a short reason for each verdict. |
-| Restore Hygiene (AC3) | WAD not restored, or wrong sha256. | WAD restored, but leftovers remain or restore unverified. | WAD sha256 matches, no leftovers, `git status` clean except results file. | Level 3 plus before/after evidence side by side. |
+| Restore Hygiene (AC3) | WAD not restored, or wrong sha256. | WAD restored, but leftovers remain or restore unverified. | WAD sha256 matches, no leftovers, host `git status` clean except results file. | Level 3 plus before/after evidence side by side. |
 | Report Clarity (AC4) | Results file missing. | File exists with empty cells or unclear verdict. | Full table plus a one-line overall verdict. | Level 3 plus a useful note on anything unexpected. |
 
 ## Pass Threshold
