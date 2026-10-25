@@ -26,3 +26,11 @@ Change from Run 001: added the last sentence.
 ```
 Follow docs/prd.md to test the failure paths of scripts/demo1-check.sh. Run all four cases (A to D) in the order given in "Ordered actions", record each case's exit code and key output line, restore the WAD, and write the results to docs/smoke-tests/demo1-failure-paths.md. Do not edit any tracked files and do not commit. For each case, also record the exact command you ran, so any case can be repeated in one step.
 ```
+
+### Run 003 (Module 1 Lab, parallel worktree `gimpl-lab-t1`)
+
+Changes from Run 002: the results go to a per-run file instead of the shared Run 001 path, the agent stops if that file already exists, and the agent doesn't run git, since git can't work inside the worktree's container. All three changes follow the PRD revision made before this run (see "Revision history" in `docs/prd.md`).
+
+```
+Follow docs/prd.md to test the failure paths of scripts/demo1-check.sh. Run all four cases (A to D) in the order given in "Ordered actions", record each case's exit code and key output line, restore the WAD, and write the results to docs/smoke-tests/demo1-failure-paths-run003.md. If that file already exists, stop and tell me instead of overwriting it. Do not edit any tracked files, do not commit, and do not run git (it won't work in this container; I check git on the host). For each case, also record the exact command you ran, so any case can be repeated in one step.
+```
