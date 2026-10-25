@@ -1,0 +1,656 @@
+configure.ac:42: warning: The macro 'AC_PROG_CC_C99' is obsolete.
+configure.ac:42: You should run autoupdate.
+./lib/autoconf/c.m4:1662: AC_PROG_CC_C99 is expanded from...
+configure.ac:42: the top level
+configure.ac:41: installing 'autotools/ar-lib'
+configure.ac:41: installing 'autotools/compile'
+configure.ac:37: installing 'autotools/config.guess'
+configure.ac:37: installing 'autotools/config.sub'
+configure.ac:249: installing 'autotools/install-sh'
+configure.ac:249: installing 'autotools/missing'
+opl/Makefile.am: installing 'autotools/depcomp'
+src/Makefile.am:59: warning: source file '$(top_builddir)/win32/win_opendir.c' is in a subdirectory,
+src/Makefile.am:59: but option 'subdir-objects' is disabled
+automake: warning: possible forward-incompatibility.
+automake: At least one source file is in a subdirectory, but the 'subdir-objects'
+automake: automake option hasn't been enabled.  For now, the corresponding output
+automake: object file(s) will be placed in the top-level directory.  However, this
+automake: behavior may change in a future Automake major version, with object
+automake: files being placed in the same subdirectory as the corresponding sources.
+automake: You are advised to start using 'subdir-objects' option throughout your
+automake: project, to avoid future incompatibility.
+checking build system type... aarch64-unknown-linux-gnu
+checking host system type... aarch64-unknown-linux-gnu
+checking for gcc... gcc
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... no
+checking for suffix of object files... o
+checking whether the compiler supports GNU C... yes
+checking whether gcc accepts -g... yes
+checking for gcc option to enable C11 features... none needed
+checking whether gcc understands -c and -o together... yes
+checking for ar... ar
+checking the archiver (ar) interface... ar
+checking for ranlib... ranlib
+checking for python3... true
+checking target system type... aarch64-unknown-linux-gnu
+checking for pkg-config... /usr/bin/pkg-config
+checking pkg-config is at least version 0.9.0... yes
+checking for sdl2 >= 2.0.14... yes
+checking for SDL2_mixer >= 2.0.2... yes
+checking for SDL2_net >= 2.0.0... yes
+checking for samplerate >= 0.1.8... yes
+checking for libpng >= 1.2.50... no
+checking for fluidsynth >= 2.2.0... no
+checking for log in -lm... yes
+checking for stdio.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for strings.h... yes
+checking for sys/stat.h... yes
+checking for sys/types.h... yes
+checking for unistd.h... yes
+checking for dirent.h... yes
+checking for linux/kd.h... yes
+checking for dev/isa/spkrio.h... no
+checking for dev/speaker/speaker.h... no
+checking for mmap... yes
+checking for ioperm... no
+checking for gcc options needed to detect all undeclared functions... none needed
+checking whether strcasecmp is declared... yes
+checking whether strncasecmp is declared... yes
+checking for i386_iopl in -li386... no
+checking for amd64_iopl in -lamd64... no
+checking for objdump... objdump
+checking for strip... strip
+checking for a BSD-compatible install... /usr/bin/install -c
+checking whether sleep supports fractional seconds... yes
+checking filesystem timestamp resolution... make: Warning: File 'conftest.ts2' has modification time 4.9e-05 s in the future
+make: warning:  Clock skew detected.  Your build may be incomplete.
+make: Warning: File 'conftest.ts2' has modification time 7.1e-05 s in the future
+make: warning:  Clock skew detected.  Your build may be incomplete.
+0.01
+checking whether build environment is sane... yes
+checking for a race-free mkdir -p... /usr/bin/mkdir -p
+checking for gawk... no
+checking for mawk... mawk
+checking whether make sets $(MAKE)... yes
+checking whether make supports the include directive... yes (GNU style)
+checking whether make supports nested variables... yes
+checking xargs -n works... yes
+checking dependency style of gcc... gcc3
+checking that generated files are newer than configure... done
+configure: creating ./config.status
+config.status: creating Makefile
+config.status: creating man/Makefile
+config.status: creating man/bash-completion/Makefile
+config.status: creating man/bash-completion/doom.template
+config.status: creating man/bash-completion/heretic.template
+config.status: creating man/bash-completion/hexen.template
+config.status: creating man/bash-completion/strife.template
+config.status: creating opl/Makefile
+config.status: creating opl/examples/Makefile
+config.status: creating pcsound/Makefile
+config.status: creating pkg/Makefile
+config.status: creating pkg/config.make
+config.status: creating pkg/osx/Info.plist
+config.status: creating rpm.spec
+config.status: creating data/Makefile
+config.status: creating src/Makefile
+config.status: creating src/doom-res.rc
+config.status: creating src/Doom.metainfo.xml
+config.status: creating src/Doom.desktop
+config.status: creating src/Doom_Screensaver.desktop
+config.status: creating src/doom/Makefile
+config.status: creating src/heretic-res.rc
+config.status: creating src/Heretic.metainfo.xml
+config.status: creating src/Heretic.desktop
+config.status: creating src/heretic/Makefile
+config.status: creating src/hexen-res.rc
+config.status: creating src/Hexen.metainfo.xml
+config.status: creating src/Hexen.desktop
+config.status: creating src/hexen/Makefile
+config.status: creating src/setup-res.rc
+config.status: creating src/setup/Makefile
+config.status: creating src/setup/Setup.desktop
+config.status: creating src/setup/setup-manifest.xml
+config.status: creating src/strife-res.rc
+config.status: creating src/Strife.metainfo.xml
+config.status: creating src/Strife.desktop
+config.status: creating src/strife/Makefile
+config.status: creating textscreen/Makefile
+config.status: creating textscreen/examples/Makefile
+config.status: creating textscreen/fonts/Makefile
+config.status: creating config.h
+config.status: executing depfiles commands
+make  all-recursive
+make[1]: Entering directory '/workspace'
+Making all in textscreen
+make[2]: Entering directory '/workspace/textscreen'
+Making all in fonts
+make[3]: Entering directory '/workspace/textscreen/fonts'
+./convert-font small small.png small.h
+WARNING: Could not update small.h. Please install the Python Imaging library or Pillow.
+./convert-font normal normal.png normal.h
+WARNING: Could not update normal.h. Please install the Python Imaging library or Pillow.
+./convert-font large large.png large.h
+WARNING: Could not update large.h. Please install the Python Imaging library or Pillow.
+make[3]: Leaving directory '/workspace/textscreen/fonts'
+Making all in .
+make[3]: Entering directory '/workspace/textscreen'
+  CC       txt_conditional.o
+  CC       txt_checkbox.o
+  CC       txt_desktop.o
+  CC       txt_dropdown.o
+  CC       txt_fileselect.o
+  CC       txt_gui.o
+  CC       txt_inputbox.o
+  CC       txt_io.o
+  CC       txt_button.o
+  CC       txt_label.o
+  CC       txt_radiobutton.o
+  CC       txt_scrollpane.o
+  CC       txt_separator.o
+  CC       txt_spinctrl.o
+  CC       txt_sdl.o
+  CC       txt_strut.o
+  CC       txt_table.o
+  CC       txt_utf8.o
+  CC       txt_widget.o
+  CC       txt_window.o
+  CC       txt_window_action.o
+  AR       libtextscreen.a
+make[3]: Leaving directory '/workspace/textscreen'
+Making all in examples
+make[3]: Entering directory '/workspace/textscreen/examples'
+  CC       guitest.o
+  CCLD     guitest
+  CC       calculator.o
+  CCLD     calculator
+make[3]: Leaving directory '/workspace/textscreen/examples'
+make[2]: Leaving directory '/workspace/textscreen'
+Making all in opl
+make[2]: Entering directory '/workspace/opl'
+Making all in .
+make[3]: Entering directory '/workspace/opl'
+  CC       opl.o
+  CC       opl_linux.o
+  CC       opl_obsd.o
+  CC       opl_queue.o
+  CC       opl_sdl.o
+  CC       opl_timer.o
+  CC       opl_win32.o
+  CC       ioperm_sys.o
+  CC       opl3.o
+  AR       libopl.a
+make[3]: Leaving directory '/workspace/opl'
+Making all in examples
+make[3]: Entering directory '/workspace/opl/examples'
+  CC       droplay.o
+  CCLD     droplay
+make[3]: Leaving directory '/workspace/opl/examples'
+make[2]: Leaving directory '/workspace/opl'
+Making all in pcsound
+make[2]: Entering directory '/workspace/pcsound'
+  CC       pcsound.o
+  CC       pcsound_bsd.o
+  CC       pcsound_sdl.o
+  CC       pcsound_linux.o
+  CC       pcsound_win32.o
+  AR       libpcsound.a
+make[2]: Leaving directory '/workspace/pcsound'
+Making all in data
+make[2]: Entering directory '/workspace/data'
+cp ../data/doom.png chocolate-doom.png
+cp ../data/heretic.png chocolate-heretic.png
+cp ../data/hexen.png chocolate-hexen.png
+cp ../data/setup.png chocolate-setup.png
+cp ../data/strife.png chocolate-strife.png
+make[2]: Leaving directory '/workspace/data'
+Making all in src
+make[2]: Entering directory '/workspace/src'
+Making all in doom
+make[3]: Entering directory '/workspace/src/doom'
+  CC       am_map.o
+  CC       deh_ammo.o
+  CC       deh_bexstr.o
+  CC       deh_cheat.o
+  CC       deh_doom.o
+  CC       deh_frame.o
+  CC       deh_misc.o
+  CC       deh_ptr.o
+  CC       deh_sound.o
+  CC       deh_thing.o
+  CC       deh_weapon.o
+  CC       d_items.o
+  CC       d_main.o
+  CC       d_net.o
+  CC       doomdef.o
+  CC       doomstat.o
+  CC       dstrings.o
+  CC       f_finale.o
+  CC       f_wipe.o
+  CC       g_game.o
+  CC       hu_lib.o
+  CC       hu_stuff.o
+  CC       info.o
+  CC       m_menu.o
+  CC       m_random.o
+  CC       p_ceilng.o
+  CC       p_doors.o
+  CC       p_enemy.o
+  CC       p_floor.o
+  CC       p_inter.o
+  CC       p_lights.o
+  CC       p_map.o
+  CC       p_maputl.o
+  CC       p_mobj.o
+  CC       p_plats.o
+  CC       p_pspr.o
+  CC       p_saveg.o
+  CC       p_setup.o
+  CC       p_sight.o
+  CC       p_spec.o
+  CC       p_switch.o
+  CC       p_telept.o
+  CC       p_tick.o
+  CC       p_user.o
+  CC       r_bsp.o
+  CC       r_data.o
+  CC       r_draw.o
+  CC       r_main.o
+  CC       r_plane.o
+  CC       r_segs.o
+  CC       r_sky.o
+  CC       r_things.o
+  CC       s_sound.o
+  CC       sounds.o
+  CC       statdump.o
+  CC       st_lib.o
+  CC       st_stuff.o
+  CC       wi_stuff.o
+  AR       libdoom.a
+make[3]: Leaving directory '/workspace/src/doom'
+Making all in heretic
+make[3]: Entering directory '/workspace/src/heretic'
+  CC       am_map.o
+  CC       ct_chat.o
+  CC       deh_ammo.o
+  CC       deh_frame.o
+  CC       deh_htext.o
+  CC       deh_htic.o
+  CC       deh_sound.o
+  CC       deh_thing.o
+  CC       deh_weapon.o
+  CC       d_main.o
+  CC       d_net.o
+  CC       f_finale.o
+  CC       g_game.o
+  CC       info.o
+  CC       in_lude.o
+  CC       m_random.o
+  CC       mn_menu.o
+  CC       p_ceilng.o
+  CC       p_doors.o
+  CC       p_enemy.o
+  CC       p_floor.o
+  CC       p_inter.o
+  CC       p_lights.o
+  CC       p_map.o
+  CC       p_maputl.o
+  CC       p_mobj.o
+  CC       p_plats.o
+  CC       p_pspr.o
+  CC       p_saveg.o
+  CC       p_setup.o
+  CC       p_sight.o
+  CC       p_spec.o
+  CC       p_switch.o
+  CC       p_telept.o
+  CC       p_tick.o
+  CC       p_user.o
+  CC       r_bsp.o
+  CC       r_data.o
+  CC       r_draw.o
+  CC       r_main.o
+  CC       r_plane.o
+  CC       r_segs.o
+  CC       r_things.o
+  CC       sb_bar.o
+  CC       sounds.o
+  CC       s_sound.o
+  AR       libheretic.a
+make[3]: Leaving directory '/workspace/src/heretic'
+Making all in hexen
+make[3]: Entering directory '/workspace/src/hexen'
+  CC       a_action.o
+  CC       am_map.o
+  CC       ct_chat.o
+  CC       d_net.o
+  CC       f_finale.o
+  CC       g_game.o
+  CC       h2_main.o
+  CC       info.o
+  CC       in_lude.o
+  CC       m_random.o
+  CC       mn_menu.o
+  CC       p_acs.o
+  CC       p_anim.o
+  CC       p_ceilng.o
+  CC       p_doors.o
+  CC       p_enemy.o
+  CC       p_floor.o
+  CC       p_inter.o
+  CC       p_lights.o
+  CC       p_map.o
+  CC       p_maputl.o
+  CC       p_mobj.o
+  CC       po_man.o
+  CC       p_plats.o
+  CC       p_pspr.o
+  CC       p_setup.o
+  CC       p_sight.o
+  CC       p_spec.o
+  CC       p_switch.o
+  CC       p_telept.o
+  CC       p_things.o
+  CC       p_tick.o
+  CC       p_user.o
+  CC       r_bsp.o
+  CC       r_data.o
+  CC       r_draw.o
+  CC       r_main.o
+  CC       r_plane.o
+  CC       r_segs.o
+  CC       r_things.o
+  CC       s_sound.o
+  CC       sb_bar.o
+  CC       sc_man.o
+  CC       sn_sonix.o
+  CC       sounds.o
+  CC       st_start.o
+  CC       sv_save.o
+  AR       libhexen.a
+make[3]: Leaving directory '/workspace/src/hexen'
+Making all in strife
+make[3]: Entering directory '/workspace/src/strife'
+  CC       am_map.o
+  CC       deh_ammo.o
+  CC       deh_cheat.o
+  CC       deh_strife.o
+  CC       deh_frame.o
+  CC       deh_misc.o
+  CC       deh_ptr.o
+  CC       deh_sound.o
+  CC       deh_thing.o
+  CC       deh_weapon.o
+  CC       d_items.o
+  CC       d_main.o
+  CC       d_net.o
+  CC       doomdef.o
+  CC       doomstat.o
+  CC       dstrings.o
+  CC       f_finale.o
+  CC       f_wipe.o
+  CC       g_game.o
+  CC       hu_lib.o
+  CC       hu_stuff.o
+  CC       info.o
+  CC       m_menu.o
+  CC       m_random.o
+  CC       m_saves.o
+  CC       p_ceilng.o
+  CC       p_dialog.o
+  CC       p_doors.o
+  CC       p_enemy.o
+  CC       p_floor.o
+  CC       p_inter.o
+  CC       p_lights.o
+  CC       p_map.o
+  CC       p_maputl.o
+  CC       p_mobj.o
+  CC       p_plats.o
+  CC       p_pspr.o
+  CC       p_saveg.o
+  CC       p_setup.o
+  CC       p_sight.o
+  CC       p_spec.o
+  CC       p_switch.o
+  CC       p_telept.o
+  CC       p_tick.o
+  CC       p_user.o
+  CC       r_bsp.o
+  CC       r_data.o
+  CC       r_draw.o
+  CC       r_main.o
+  CC       r_plane.o
+  CC       r_segs.o
+  CC       r_sky.o
+  CC       r_things.o
+  CC       s_sound.o
+  CC       sounds.o
+  CC       st_lib.o
+  CC       st_stuff.o
+  CC       wi_stuff.o
+  AR       libstrife.a
+make[3]: Leaving directory '/workspace/src/strife'
+Making all in setup
+make[3]: Entering directory '/workspace/src/setup'
+  CC       compatibility.o
+  CC       display.o
+  CC       joystick.o
+  CC       keyboard.o
+  CC       mainmenu.o
+  CC       mode.o
+  CC       mouse.o
+  CC       multiplayer.o
+  CC       sound.o
+  CC       execute.o
+  CC       txt_joyaxis.o
+  CC       txt_joybinput.o
+  CC       txt_keyinput.o
+  CC       txt_mouseinput.o
+  AR       libsetup.a
+cp Setup.desktop org.chocolate_doom.Setup.desktop
+make[3]: Leaving directory '/workspace/src/setup'
+make[3]: Entering directory '/workspace/src'
+  CC       i_main.o
+  CC       i_system.o
+  CC       m_argv.o
+  CC       m_misc.o
+  CC       aes_prng.o
+  CC       d_event.o
+  CC       d_iwad.o
+  CC       d_loop.o
+  CC       d_mode.o
+  CC       deh_str.o
+  CC       gusconf.o
+  CC       i_cdmus.o
+  CC       i_endoom.o
+  CC       i_flmusic.o
+  CC       i_glob.o
+  CC       i_input.o
+  CC       i_joystick.o
+  CC       i_musicpack.o
+  CC       i_oplmusic.o
+  CC       i_pcsound.o
+  CC       i_sdlmusic.o
+  CC       i_sdlsound.o
+  CC       i_sound.o
+  CC       i_timer.o
+  CC       i_video.o
+  CC       i_videohr.o
+  CC       i_winmusic.o
+  CC       midifallback.o
+  CC       midifile.o
+  CC       mus2mid.o
+  CC       m_bbox.o
+  CC       m_cheat.o
+  CC       m_config.o
+  CC       m_controls.o
+  CC       m_fixed.o
+  CC       net_client.o
+  CC       net_common.o
+  CC       net_dedicated.o
+  CC       net_gui.o
+  CC       net_io.o
+  CC       net_loop.o
+  CC       net_packet.o
+  CC       net_petname.o
+  CC       net_query.o
+  CC       net_sdl.o
+  CC       net_server.o
+  CC       net_structrw.o
+  CC       p_rejectpad.o
+  CC       sha1.o
+  CC       memio.o
+  CC       tables.o
+  CC       v_diskicon.o
+  CC       v_video.o
+  CC       w_checksum.o
+  CC       w_main.o
+  CC       w_wad.o
+  CC       w_file.o
+  CC       w_file_stdc.o
+  CC       w_file_posix.o
+  CC       w_file_win32.o
+  CC       w_merge.o
+  CC       win_opendir.o
+  CC       z_zone.o
+  CC       deh_io.o
+  CC       deh_main.o
+  CC       deh_mapping.o
+  CC       deh_text.o
+  CCLD     chocolate-doom
+  CCLD     chocolate-heretic
+  CCLD     chocolate-hexen
+  CCLD     chocolate-strife
+  CC       d_dedicated.o
+  CC       z_native.o
+  CCLD     chocolate-server
+  CCLD     chocolate-setup
+cp chocolate-setup chocolate-doom-setup
+cp chocolate-setup chocolate-heretic-setup
+cp chocolate-setup chocolate-hexen-setup
+cp chocolate-setup chocolate-strife-setup
+cp Doom.desktop org.chocolate_doom.Doom.desktop
+cp Heretic.desktop org.chocolate_doom.Heretic.desktop
+cp Hexen.desktop org.chocolate_doom.Hexen.desktop
+cp Strife.desktop org.chocolate_doom.Strife.desktop
+cp Doom.metainfo.xml org.chocolate_doom.Doom.metainfo.xml
+cp Heretic.metainfo.xml org.chocolate_doom.Heretic.metainfo.xml
+cp Hexen.metainfo.xml org.chocolate_doom.Hexen.metainfo.xml
+cp Strife.metainfo.xml org.chocolate_doom.Strife.metainfo.xml
+cp Doom_Screensaver.desktop org.chocolate_doom.Doom_Screensaver.desktop
+make[3]: Leaving directory '/workspace/src'
+make[2]: Leaving directory '/workspace/src'
+Making all in man
+make[2]: Entering directory '/workspace/man'
+Making all in bash-completion
+make[3]: Entering directory '/workspace/man/bash-completion'
+../../man/docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" \
+                  -g doom -b doom.template \
+                  ../../src ../../src/doom > chocolate-doom
+../../man/docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" \
+                  -g heretic -b heretic.template \
+                  ../../src ../../src/heretic > chocolate-heretic
+../../man/docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" \
+                  -g hexen -b hexen.template \
+                  ../../src ../../src/hexen > chocolate-hexen
+../../man/docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" \
+                  -g strife -b strife.template \
+                  ../../src ../../src/strife > chocolate-strife
+make[3]: Leaving directory '/workspace/man/bash-completion'
+make[3]: Entering directory '/workspace/man'
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -g doom -m ./doom.template \
+                  ../src ../src/doom > chocolate-doom.6
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -g doom -m ./default.cfg.template \
+                  -c default ../src/m_config.c > default.cfg.5
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -g doom -m ./extra.cfg.template \
+                  -c extended ../src/m_config.c > chocolate-doom.cfg.5
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                 -g heretic -m ./heretic.template \
+                  ../src ../src/heretic > chocolate-heretic.6
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                 -g heretic -m ./default.cfg.template \
+                  -c default ../src/m_config.c > heretic.cfg.5
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                 -g heretic -m ./extra.cfg.template \
+                 -c extended ../src/m_config.c > chocolate-heretic.cfg.5
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                 -g hexen -m ./hexen.template \
+                  ../src ../src/hexen > chocolate-hexen.6
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                 -g hexen -m ./default.cfg.template \
+                 -c default ../src/m_config.c > hexen.cfg.5
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                 -g hexen -m ./extra.cfg.template \
+                 -c extended ../src/m_config.c > chocolate-hexen.cfg.5
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -g strife -m ./strife.template \
+                  ../src ../src/strife > chocolate-strife.6
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -g strife -m ./default.cfg.template \
+                  -c default ../src/m_config.c > strife.cfg.5
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -g strife -m ./extra.cfg.template \
+                  -c extended ../src/m_config.c > chocolate-strife.cfg.5
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -g server -m ./server.template \
+                  ../src > chocolate-server.6
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -g doom \
+                  -m ./setup.template \
+                  ../src > chocolate-doom-setup.6
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -g heretic \
+                  -m ./setup.template \
+                  ../src > chocolate-heretic-setup.6
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -g hexen \
+                  -m ./setup.template \
+                  ../src > chocolate-hexen-setup.6
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -g strife \
+                  -m ./setup.template \
+                  ../src > chocolate-strife-setup.6
+./simplecpp -DDOOM  \
+            -DLONG_GAME_NAME="Chocolate Doom" \
+            -DLONG_EXE_NAME="chocolate-doom" \
+            -DPRECOMPILED < ./INSTALL.template > INSTALL.doom
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -p ./CMDLINE.template \
+                  ../src/ ../src/doom/ > CMDLINE.doom
+./simplecpp -DHERETIC  \
+            -DLONG_GAME_NAME="Chocolate Heretic" \
+            -DLONG_EXE_NAME="chocolate-heretic" \
+            -DPRECOMPILED < ./INSTALL.template > INSTALL.heretic
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                 -p ./CMDLINE.template \
+                  ../src/ ../src/heretic/ > CMDLINE.heretic
+./simplecpp -DHEXEN  \
+            -DLONG_GAME_NAME="Chocolate Hexen" \
+            -DLONG_EXE_NAME="chocolate-hexen" \
+            -DPRECOMPILED < ./INSTALL.template > INSTALL.hexen
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -p ./CMDLINE.template \
+                  ../src/ ../src/hexen/ > CMDLINE.hexen
+./simplecpp -DSTRIFE  \
+            -DLONG_EXE_NAME="chocolate-strife" \
+            -DLONG_GAME_NAME="Chocolate Strife" \
+            -DPRECOMPILED < ./INSTALL.template > INSTALL.strife
+./docgen -n "chocolate" -s "Chocolate Doom" -z "Chocolate" -v "3.1.1" \
+                  -p ./CMDLINE.template \
+                  ../src/ ../src/strife/ > CMDLINE.strife
+make[3]: Leaving directory '/workspace/man'
+make[2]: Leaving directory '/workspace/man'
+make[2]: Entering directory '/workspace'
+make[2]: Leaving directory '/workspace'
+make[1]: Leaving directory '/workspace'
