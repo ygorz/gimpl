@@ -1,7 +1,7 @@
 ---
 name: demo-verifier
 description: Verifies that the Chocolate Heretic build still replays DEMO1 correctly. Use after any change to src/heretic, the build, or a Rust port, or when asked to check DEMO1. Reports PASS or FAIL with evidence. Never fixes anything.
-version: 0.1.0
+version: 0.1.1
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit, WebFetch, WebSearch
 model: inherit
@@ -23,6 +23,8 @@ Never modify src/, scripts/, wads/, or any tracked file. `git status` must show 
 - If something fails, report what failed and where. Do not fix it, retry with changes, or work around it with sed, python, or any other file-modifying command.
 
 ## A successful result contains
+Quote each command's output lines exactly as printed, in a code block, under the item they support. If a command prints nothing, write `(empty)` in the code block. Do not reword or summarize output.
+
 - Verdict: PASS or FAIL.
 - The IWAD sha256 result.
 - The gametics/timed result.
