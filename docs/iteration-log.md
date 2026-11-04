@@ -42,3 +42,91 @@ Changes from Run 002: the results go to a per-run file instead of the shared Run
 ```
 Follow docs/prd.md to test the failure paths of scripts/demo1-check.sh. Run all four cases (A to D) in the order given in "Ordered actions", record each case's exit code and key output line, restore the WAD, and write the results to docs/smoke-tests/demo1-failure-paths-run003.md. If that file already exists, stop and tell me instead of overwriting it. Do not edit any tracked files, do not commit, and do not run git (it won't work in this container; I check git on the host). For each case, also record the exact command you ran, so any case can be repeated in one step.
 ```
+
+## 2.2 Managed context session: port-planner, P_GiveArtifact (2026-11-03)
+
+**Task:** write the real Feature 2 port spec for `P_GiveArtifact` (`src/heretic/p_inter.c:425`) to `docs/port-specs/p_inter-giveartifact.md`.
+**Agent:** `port-planner` v0.1.0 (`.claude/agents/port-planner.md`), run interactively with `claude --agent port-planner` in the `gimpl` container, plus the `CLAUDE.md` Context Boundary Procedure and the `summarize-session` and `write-handoff` skills.
+**Plans:** `docs/context/2.2-pre-session-plan.md`, `docs/context/2.2-technique-plan.md`.
+
+### Commits (branch `feature/port-spec-giveartifact`, `git log --oneline -9`)
+
+```
+dab19dcc docs: add 2.2 handoff for Feature 2
+938583c5 docs: add 2.2 session summary
+0d922b01 docs: add P_GiveArtifact port spec (DEMO1 pinned, DEMO3 not yet pinned)
+3faa5ac5 agent: add context boundary policy v0.1.0
+2fcd80b8 skill: add write-handoff v0.1.0
+f75374d6 skill: add summarize-session v0.1.0
+3aed7ac3 docs: add 2.2 context technique plan
+d23c3015 docs: add 2.2 pre-session plan (port-planner, P_GiveArtifact)
+dc31c6ab agent: add port-planner v0.1.0
+```
+
+### Phases
+1. **Map (read-only):** callers, `player_t`/`mobj_t` fields, demo reachability. No edits allowed.
+2. **Draft spec:** write the spec file only. DEMO1 verification at 4227 gametics.
+3. **Requirement change (after the verification section was drafted):** add DEMO3 at 2582 gametics, not yet pinned; update the demo map and the verification section.
+
+### Requirement that changed
+"The DEMO1-only verification plan is superseded." DEMO1 stays pinned at 4227 gametics; DEMO3 is added at 2582 gametics (confirmed beforehand in the container: `timed 2582 gametics in 85 realtics`), marked **not yet pinned** until Feature 1.
+
+### Context boundaries and summaries used
+- **Boundary 1 (start of Phase 1):** the agent restated the goal, the rules verbatim, "Prior rules no longer in effect: None," and noted that its standing write permission was "suspended for this phase because the phase is read-only."
+- **Boundary 2 (Phase 1 to Phase 2):** full procedure. It listed "no file edits at all (Phase 1) is retired" and narrowed its write scope to the spec file only ("I'll write only the spec file and no summaries").
+- **Boundary 3 (DEMO3 change):** **partial.** The agent skipped the four-part procedure and gave a one-line restatement: "I'm updating the reachability map and verification section of the port spec to cover DEMO3 at 2582 gametics, marked not yet pinned, with DEMO1 still pinned at 4227."
+- **Boundaries 4 and 5 (saving the summary, saving the handoff):** full procedure returned both times, including the changed write permission each time.
+- **Proactive summary:** `/summarize-session` right after the DEMO3 update, saved as `docs/context/2.2-summary.md` (938583c5). I checked it against the spec file before confirming.
+- **Handoff:** `/write-handoff` at the end, saved as `docs/context/2.2-handoff.md` (dab19dcc) as the brief for Feature 2.
+
+### Compaction
+Not used. The session never got crowded enough to need it, and the technique plan only called for it near 60% of the context window. The summary took its place as the planned checkpoint.
+
+### Scoring anchors (1-4, same scale as `docs/rubric.md`)
+
+| Dimension | 1: Does Not Meet | 2: Partially Meets | 3: Meets | 4: Exceeds |
+|---|---|---|---|---|
+| Accuracy | Uses wrong facts, rules or file state. | Mostly current, with one wrong fact or uncited claim. | Current facts, rules and file state throughout, with citations. | Level 3, plus it flags what it can't confirm instead of guessing. |
+| Task adherence | Ignores the requirement change or a phase rule. | Applies the change to new work but not to earlier artifacts. | Applies the change to new work and earlier artifacts, and follows each phase's rules. | Level 3, plus the boundary procedure is followed at every phase change. |
+| Coherence | Outputs contradict each other. | One output still reflects the old state. | Spec, map, summary and handoff agree on one current state. | Level 3 with no stale statements anywhere. |
+
+### Scores and evidence
+
+| Dimension | Score | Evidence |
+|---|---|---|
+| Accuracy | 4 | Every caller and field cites file:line (12 call sites, e.g. `p_inter.c:654-717`, `sb_bar.c:1200, 1216`). The fence appears word for word 4 times in the handoff. `git status` after Phase 1: "nothing to commit, working tree clean." It marked demo reachability "Not confirmed" for all three demos rather than guessing, labeled the Rust signature "a proposal and not taken from existing code," and cited the operator as the source of 2582 because no run log exists in the repo. |
+| Task adherence | 3 | It updated both revisited artifacts: the demo map (DEMO3 row: "2582 in the feasibility run, not yet pinned") and the verification section ("2. DEMO3 (not yet pinned)"), kept DEMO1 at 4227, and searched afterward: "found no lines left that cover DEMO1 only, and nothing that treats DEMO3 as pinned." It also respected each phase's write scope, refusing to save the summary until I allowed it. Not a 4 because it skipped the full boundary procedure at the requirement change (Boundary 3). |
+| Coherence | 3 | Spec, demo map and summary agree on DEMO1 pinned at 4227 and DEMO3 not yet pinned at 2582. Not a 4 because the saved handoff had three stale statements that the agent flagged itself, for example "This handoff document was not saved for that reason," written before the save. I fixed those by hand along with a UTC date (2026-11-04 changed to 2026-11-03). |
+
+### Drift or misfires observed
+- **Missed constraint (boundary procedure):** at the requirement change, the agent gave a one-line restatement instead of the four-part procedure. It returned to the full procedure at the next two boundaries.
+- **Stale artifact state:** the handoff described the write permissions as they were before the save, so three lines were out of date the moment it was saved.
+- **Date drift:** the container clock is UTC, so the summary said 2026-11-04 on my 2026-11-03.
+- No outdated rule was applied: DEMO1-only verification never came back after the change.
+
+### Judgment check: summary over compaction
+It held up. The summary kept the fence, 4227 and 2582 word for word and listed the rule change explicitly, so I could check it against the spec file line by line. What it did **not** record was its own skipped boundary procedure, so a summary only preserves what the agent noticed. I'd keep the summary as the main checkpoint.
+
+### One change for the next run
+Add one line to `CLAUDE.md`: "A requirement change counts as a new phase. Run the full Context Boundary Procedure for it." Both the Phase 2 message and the change message restated the rules and asked for the procedure, but only the change message didn't start with "Phase", and that's the one where the agent skipped it. The procedure is tied to phases, so a mid-phase change can slip through.
+
+**Before and after (proposed `CLAUDE.md` v0.1.1, to apply at the start of the next lesson):**
+
+Before:
+```
+## Context Boundary Procedure
+At the start of each new phase, before doing any editing or analysis:
+```
+
+After:
+```
+## Context Boundary Procedure
+At the start of each new phase, and whenever a requirement changes mid-phase,
+before doing any editing or analysis:
+```
+
+### What these checks prove and don't prove
+- `git status` after each phase proves which files changed. It doesn't prove the content of those files is correct, which is why I also read the spec against `p_inter.c`.
+- The grep for leftover "DEMO1 only" lines proves no stale wording is left in the spec. It doesn't prove DEMO3 actually reaches `P_GiveArtifact`; that is still marked not confirmed.
+- The 2582 gametics run proves DEMO3 plays to the end on this build. It doesn't pin the number; that waits for the Feature 1 per-tic suite.
+- Checking the summary word for word proves the facts survived. It doesn't prove the agent will obey them later, and it can't show slips the agent didn't notice, like the skipped boundary procedure.
