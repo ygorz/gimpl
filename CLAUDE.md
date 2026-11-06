@@ -64,7 +64,9 @@ At the start of each new phase of work, the agent must follow the
 procedure below before taking any action.
 
 ## Context Boundary Procedure
-At the start of each new phase, before doing any editing or analysis:
+Run this procedure at the start of each new phase, and again whenever a
+requirement or rule changes mid-phase (the human adds, removes, or
+reverses an instruction), before doing any further editing or analysis:
 
 1. Restate the current task goal in one sentence.
 2. List the rules currently in effect (verbatim, not paraphrased).
