@@ -21,9 +21,16 @@ Last updated: 2026-11-06
  docs/smoke-tests/demo-suite.md. Recorded 2026-11-06.
  Review by 2027-02-04.
 
-- `current-state.md` — Feature 1 status, next action (add the
- -tichash C hook), and deferred work. Workflow-scoped; archive
- when feature/per-tic-demo-suite merges. Updated 2026-11-06.
+- `decisions/decision-004.md` — The -tichash hook stops with
+ I_Error if a player in game has no mobj; reference and
+ comparison traces always use the fixed run flags (-nodraw
+ -nosound, dummy SDL drivers). Recorded 2026-11-06.
+ Review by 2027-02-04.
+
+- `current-state.md` — Feature 1 status, next action (generate
+ the DEMO1 reference trace, needs human approval), and deferred
+ work. Workflow-scoped; archive when feature/per-tic-demo-suite
+ merges. Updated 2026-11-06.
 
 - `../knowledge/coding-standards.md` — Coding standards
  for this project. Human-maintained, read-only.

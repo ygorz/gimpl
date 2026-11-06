@@ -19,21 +19,28 @@ the suite works, and is kept alongside it afterwards.
 
 ## What Feature 1 still needs
 
-1. **C hook.** Add an opt-in `-tichash <file>` flag. After `P_Ticker()` in
-   `G_Ticker` (`src/heretic/g_game.c:1259`), write one line per tic with
-   the fields listed in "Trace format (v1)" below. It must not change
-   behaviour when the flag is absent.
+1. **C hook.** Done (2026-11-06): opt-in `-tichash <file>` flag.
+   `G_TicHashWrite()` is called right after `P_Ticker()` in `G_Ticker`
+   (`src/heretic/g_game.c:1358`) and writes one line per level tic in
+   "Trace format (v1)" below; `prndindex` is now declared in
+   `src/heretic/m_random.h`. A player in game with no mobj stops the run
+   with `I_Error` (decision-004). Test run: two runs with the fixed flags
+   gave byte-identical traces (header plus gametic 0-4226, still 4227
+   gametics). No reference trace was generated.
 2. **Trace format.** Done: pinned as v1 below (decision-003).
 3. **Reference trace.** Generate `tests/demos/golden/demo1.tics` from a
-   known-good C build and record that commit.
+   known-good C build with the fixed run flags (below) and record that
+   commit. Needs explicit human approval before it runs (coding standard 4).
 4. **Manifest.** Add `tests/demos/manifest` with demo name, expected gametics,
    trace sha256 and the source commit for each demo.
 5. **Runner.** Replace the stub body of `scripts/demo-suite.sh` with the
-   planned steps: wad check, manifest/trace sha256 check, headless run, tic
-   count check, per-tic comparison by `gametic` reporting the first tic and
-   field that differ, and exit codes 0/1/2.
-6. **Hook-off check.** Confirm `scripts/demo1-check.sh` still passes (4227)
-   with the hook built in but the flag not set.
+   planned steps: wad check, manifest/trace sha256 check, headless run with
+   the fixed run flags (below), tic count check, per-tic comparison by
+   `gametic` reporting the first tic and field that differ, and exit codes
+   0/1/2.
+6. **Hook-off check.** Done (2026-11-06): `scripts/demo1-check.sh` passes
+   (4227 gametics, script exit 0) with the hook built in and the flag not
+   set.
 7. **Failure-path runs.** Record a PASS run and forced FAIL runs (edited trace,
    bad sha256), as done for `demo1-check.sh`.
 8. **Agent.** Update `demo-verifier` to call the suite (rubric and iteration
@@ -100,6 +107,23 @@ Illustrative line (made-up values, not from a real trace):
 ```
 0 0 0 p0 ffc00000 01600000 00000000 40000000 00000000 00000000 100 0 1 0 0
 ```
+
+### Fixed run flags
+
+Reference traces are generated, and comparison traces are produced, with
+exactly this invocation and nothing else (decision-004):
+
+```
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+  src/chocolate-heretic -iwad wads/blasphem.wad -timedemo <demo> \
+  -nodraw -nosound -tichash <file>
+```
+
+`rndindex` is shared with code outside the game simulation, so a trace made
+with other flags can differ without any real desync. Such a trace cannot be
+committed as a reference or compared against one. Changing these flags means
+regenerating every reference trace, which needs human approval (coding
+standard 4).
 
 ### Comparison rules (runner)
 
