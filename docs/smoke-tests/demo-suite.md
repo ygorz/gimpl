@@ -11,6 +11,11 @@ the suite works, and is kept alongside it afterwards.
 - DEMO1 only to start (pinned at 4227 gametics).
 - Fingerprint covers RNG (`rndindex`, `prndindex`) and player state only,
   not the thinker list.
+- Reference traces are never regenerated or edited silently. A changed
+  trace needs human approval and a commit that says why (coding standard 4).
+- Approach 2 (a pinned C reference build run side by side) is deferred, not
+  rejected; see `.memory/project/decisions/decision-001.md`.
+- `scripts/demo1-check.sh` stays unchanged while the suite is built.
 
 ## What Feature 1 still needs
 

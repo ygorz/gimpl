@@ -14,6 +14,10 @@ Last updated: 2026-11-05
  work and merge to master with it (not a separate branch, not
  outside git). Recorded 2026-11-05. Review by 2027-02-03.
 
+- `current-state.md` — Feature 1 status, next action (pin the
+ trace format), and deferred work. Workflow-scoped; archive when
+ feature/per-tic-demo-suite merges. Updated 2026-11-05.
+
 - `../knowledge/coding-standards.md` — Coding standards
  for this project. Human-maintained, read-only.
  Last reviewed 2026-11-05.

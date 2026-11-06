@@ -49,26 +49,53 @@ Review when project policy changes or a conflict is found. Humans approve replac
 
 ## Layer 3: Indexed reference documents
 
-### Belongs here
-- An index pointing to port specs, including the P_GiveArtifact spec.
-- Links to demo-check documentation and recorded test evidence.
-- Links to context summaries and handoffs, labeled by session or feature.
-- A link to the iteration log for historical decisions and results.
+### Current state
+Intentionally empty. `.memory/reference/REFERENCE_INDEX.md` exists and lists no documents. GIMPL's port specs, demo-check docs, handoffs, and the iteration log already live in `docs/` and are found by searching the repo, so copying or indexing them here would only duplicate them.
+
+### Belongs here (when added)
+- Large, rarely needed documents that should be looked up on demand rather than loaded at startup, such as a DOOM/Heretic data-format spec or a long C-to-Rust mapping table.
+- Each entry in the index: file name, one-line summary, when to consult it, and date added.
 
 ### Does not belong here
-- Copies of whole documents inside the index: link to the authoritative artifact instead.
+- Copies of documents already in `docs/`: link to the authoritative file instead.
 - Unlabeled old handoffs presented as current instructions: historical material must not override current rules.
 
+### Trigger to add the first entry
+A fresh session repeatedly needs the same large outside document, or a document is too big to read on every startup.
+
 ### Scope
-GIMPL reference material. Each index entry states its topic, when to consult it, and whether it is current or historical.
+GIMPL reference material only.
 
 ### Write permissions
-The agent may maintain the index and edit task-authorized documents. Being indexed does not grant permission to edit a document or change its rules.
+Human-controlled. The directory is read-only (555) like the knowledge directory; the agent may propose index entries but a human adds them.
 
 ### Pruning policy
-Check links when documents move or features finish. Update or remove broken entries, label superseded documents, and retain useful historical evidence without loading it into every session.
+Check entries when documents move or features finish. Remove broken entries and label superseded documents as historical.
+
+## Why the write boundaries are drawn here
+- Knowledge files are human-only because they hold the rules that keep the port honest. If the agent could edit them, it could quietly loosen a rule like "reference traces need human approval" to make a failing demo pass, and nothing would flag it.
+- Project memory is agent-writable because status and next actions change every session; requiring a human for each update would make memory go stale. Human review before commit is the check.
+- Permissions are enforced by the filesystem (555 directories, 444 files), not only by instructions, and were verified inside the container: even as root, `touch` and `chmod` in `.memory/knowledge/` returned Permission denied, because the repo is mounted from the Mac host.
+
+### When to revise a pruning trigger
+- If a fresh session acts on a stale next action or an outdated decision, shorten the review interval or add a check at that event.
+- If the 90-day review keeps finding nothing to change, lengthen it.
+- When GIMPL moves past Feature 1 into many parallel features, review per feature merge instead of on a fixed calendar.
 
 ## Allocation decision table
+
+| Information | Where it goes | Why |
+|---|---|---|
+| Why Feature 1 uses per-tic golden traces (decision-001) | Project memory | Reasoning the repo can't show; may be revisited |
+| Where `.memory/` lives and how it merges (decision-002) | Project memory | Project decision with a review date |
+| Current Feature 1 status and next action | Project memory | Changes every session |
+| "Preserve original C behavior" and the other coding standards | Knowledge file | Stable rule; human-controlled |
+| How to run the demo checks | Skill | A procedure (how), not memory (why) |
+| wad sha256 and DEMO1 4227-tic expectation | Repo (`scripts/`, docs) | Already preserved in code and docs |
+| Raw traces and session transcripts | Repo artifacts or not stored | Evidence, not memory; too large to load |
+| Slack and Gmail credentials, tokens | Never stored | Secrets stay outside GIMPL |
+| One-off session permissions | Not stored | Must not become standing authorization |
+| Large external specs (future) | Indexed reference | Looked up on demand, not loaded at startup |
 
 ## Alternatives considered
 
