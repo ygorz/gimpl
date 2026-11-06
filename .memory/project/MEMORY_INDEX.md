@@ -1,6 +1,6 @@
 # Project Memory Index
 
-Last updated: 2026-11-05
+Last updated: 2026-11-06
 
 ## Active entries
 
@@ -14,9 +14,16 @@ Last updated: 2026-11-05
  work and merge to master with it (not a separate branch, not
  outside git). Recorded 2026-11-05. Review by 2027-02-03.
 
-- `current-state.md` — Feature 1 status, next action (pin the
- trace format), and deferred work. Workflow-scoped; archive when
- feature/per-tic-demo-suite merges. Updated 2026-11-05.
+- `decisions/decision-003.md` — Per-tic trace format v1:
+ `#tichash v1` header, positional space-separated lines, hex for
+ fixed_t/angle_t, decimal for the rest, per-player `pN` blocks,
+ no line on non-level tics, runner matches by gametic. Spec in
+ docs/smoke-tests/demo-suite.md. Recorded 2026-11-06.
+ Review by 2027-02-04.
+
+- `current-state.md` — Feature 1 status, next action (add the
+ -tichash C hook), and deferred work. Workflow-scoped; archive
+ when feature/per-tic-demo-suite merges. Updated 2026-11-06.
 
 - `../knowledge/coding-standards.md` — Coding standards
  for this project. Human-maintained, read-only.
