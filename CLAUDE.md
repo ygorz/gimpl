@@ -40,7 +40,9 @@ duplicates.
 
 - .memory/reference/ — Read-only. Check
  .memory/reference/REFERENCE_INDEX.md when you need background
- context, and open only the listed documents you need.
+ context, and open only the listed documents you need. Never write
+ to this directory or modify its permissions without explicit human
+ instruction. If a permission error occurs there, stop and ask.
 
 ### Write policy
 
