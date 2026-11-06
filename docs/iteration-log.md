@@ -1,4 +1,6 @@
-# Iteration Log: DEMO1 Check Agent
+# Iteration Log: GIMPL
+
+## Module 1: DEMO1 Check Agent
 
 Each run is scored against `docs/rubric.md` (pass = 3 or higher on every dimension plus both binary gates). The workflow is defined in `docs/prd.md`.
 
@@ -17,17 +19,17 @@ The engine was built in the container (`./autogen.sh && make`) as untimed setup 
 | 002 | 2026-10-24 | Claude Code (Opus 5.5, plus Haiku 5.5 for minor calls), in the sandbox container | `time claude "..."` with the Run 002 prompt (see Run prompts below) | 2m 28.9s (`real`), including the time the agent waited for my answer about the results file | Coverage 4: all four cases recorded, plus a "Commands to repeat each case" table with an exact, self-restoring command for each. Verdicts 3: all four correct and based on exit codes; notes still explain C and D but not A or B. Restore 3: sha256 matches before and after, dummy and backup gone, only the new results file in git status; evidence still in separate sections. Report 4: full table, clear verdict, useful notes, plus the new commands section. Gates: no tracked-file edits, no commits. | Pass | 3m 17.8s | $0.32 (Opus: 1.0k input, 4.2k output, 378.4k cache read, 18.9k cache write; Haiku: 1.3k input, 204 output) | Change: added one sentence to the prompt asking for the exact command for each case, aimed at the Run 001 Coverage gap. It worked: Coverage went from 3 to 4, and the other scores held, so the change didn't cost anything elsewhere. The agent went further than asked by making the B and C commands set up and restore the WAD themselves and wrapping each in `timeout 300`, which also guards against the hang edge case. New problem the PRD didn't anticipate: Run 001's results file was already committed, so writing to the same path would have edited a tracked file. The agent stopped and asked instead of breaking the gate, which is the right call, but it means the run needed my input. I chose a new file, `demo1-failure-paths-run002.md`. Cycle time rose about 56s and cost rose about $0.03, partly from that pause and the extra commands section. Next change worth making: have the PRD name a per-run results file (for example `demo1-failure-paths-runNNN.md`) so repeat runs never collide with a committed file. |
 | 003 | 2026-10-25 | Claude Code (Opus 5.5), in its own container with only worktree `gimpl-lab-t1` mounted (Module 1 Lab, run in parallel with Task 2) | `time claude "..."` with the Run 003 prompt (see Run prompts below) | 2m 29.5s (`real`), which includes signing back in to Claude Code at startup; Claude's own session wall time was 1m 8s | Coverage 4: all four cases recorded with exit codes, key lines, and an exact repeatable command for each, including the restore step. Verdicts 3: all four correct and based on exit codes; notes explain C (stopped at the IWAD check) and the engine's normal exit 255, but still nothing on why B exits 2. Restore 4: before and after sha256 and the before and after `docs/smoke-tests/` listings are shown together in one "Restore and cleanliness checks" section; backup gone, `/tmp` holds only Claude Code's own files, and host `git status` shows only the new results file. Report 4: full table, clear verdict, commands section, and notes on realtics and the timeout wrapper. Gates: no tracked-file edits, no commits, no git. | Pass | 3m 11.09s | $0.29 (Opus: 18 input, 3.6k output, 337.8k cache read, 19.5k cache write; no Haiku calls this run) | Both PRD fixes worked. The per-run filename meant the agent wrote `demo1-failure-paths-run003.md` without stopping to ask, which removed the pause that inflated Run 002's cycle time. Replacing `git status` with a folder listing let the agent prove cleanliness inside a worktree container, and the host `git status` matched it exactly, so the boundary between what the agent checks and what I check is now clear. Restore rose from 3 to 4 only because the new listing step put before and after evidence side by side; the agent's behavior didn't change, the spec did. Cycle time is not comparable to earlier runs: the container's Claude login had expired, so `real` includes sign-in time. The next iteration should check the login before starting `time`, or use Claude's own wall time. Verdicts has stayed at 3 for three runs because no prompt asks for an explanation of every case; that's the next targeted change. Realtics were 121 here (132 and 120 before) while gametics stayed at 4227, which again confirms gametics is the right thing to compare. |
 
-## Run prompts
+### Run prompts (DEMO1 Check Agent)
 
 The full prompt for each run is recorded here so any run can be repeated exactly.
 
-### Run 001
+#### Run 001
 
 ```
 Follow docs/prd.md to test the failure paths of scripts/demo1-check.sh. Run all four cases (A to D) in the order given in "Ordered actions", record each case's exit code and key output line, restore the WAD, and write the results to docs/smoke-tests/demo1-failure-paths.md. Do not edit any tracked files and do not commit.
 ```
 
-### Run 002
+#### Run 002
 
 Change from Run 001: added the last sentence.
 
@@ -35,7 +37,7 @@ Change from Run 001: added the last sentence.
 Follow docs/prd.md to test the failure paths of scripts/demo1-check.sh. Run all four cases (A to D) in the order given in "Ordered actions", record each case's exit code and key output line, restore the WAD, and write the results to docs/smoke-tests/demo1-failure-paths.md. Do not edit any tracked files and do not commit. For each case, also record the exact command you ran, so any case can be repeated in one step.
 ```
 
-### Run 003 (Module 1 Lab, parallel worktree `gimpl-lab-t1`)
+#### Run 003 (Module 1 Lab, parallel worktree `gimpl-lab-t1`)
 
 Changes from Run 002: the results go to a per-run file instead of the shared Run 001 path, the agent stops if that file already exists, and the agent doesn't run git, since git can't work inside the worktree's container. All three changes follow the PRD revision made before this run (see "Revision history" in `docs/prd.md`).
 
@@ -43,7 +45,7 @@ Changes from Run 002: the results go to a per-run file instead of the shared Run
 Follow docs/prd.md to test the failure paths of scripts/demo1-check.sh. Run all four cases (A to D) in the order given in "Ordered actions", record each case's exit code and key output line, restore the WAD, and write the results to docs/smoke-tests/demo1-failure-paths-run003.md. If that file already exists, stop and tell me instead of overwriting it. Do not edit any tracked files, do not commit, and do not run git (it won't work in this container; I check git on the host). For each case, also record the exact command you ran, so any case can be repeated in one step.
 ```
 
-## 2.2 Managed context session: port-planner, P_GiveArtifact (2026-11-03)
+## 2.2 Managed context session: port-planner, P_GiveArtifact
 
 **Task:** write the real Feature 2 port spec for `P_GiveArtifact` (`src/heretic/p_inter.c:425`) to `docs/port-specs/p_inter-giveartifact.md`.
 **Agent:** `port-planner` v0.1.0 (`.claude/agents/port-planner.md`), run interactively with `claude --agent port-planner` in the `gimpl` container, plus the `CLAUDE.md` Context Boundary Procedure and the `summarize-session` and `write-handoff` skills.
@@ -130,3 +132,102 @@ before doing any editing or analysis:
 - The grep for leftover "DEMO1 only" lines proves no stale wording is left in the spec. It doesn't prove DEMO3 actually reaches `P_GiveArtifact`; that is still marked not confirmed.
 - The 2582 gametics run proves DEMO3 plays to the end on this build. It doesn't pin the number; that waits for the Feature 1 per-tic suite.
 - Checking the summary word for word proves the facts survived. It doesn't prove the agent will obey them later, and it can't show slips the agent didn't notice, like the skipped boundary procedure.
+
+## 2.3 Exercise 1: Persistent memory, fresh-session verification
+
+**Agent:** default Claude Code session (no `--agent`), governed by `CLAUDE.md` v0.1.1. Claude Code v2.1.301 (in the container), Opus 5.5.
+**Workflow:** Feature 1, the per-tic demo suite (resume and assess where it stands).
+**Branch:** `feature/per-tic-demo-suite`
+
+### Commits
+
+```
+3d9b2d97 CLAUDE.md v0.1.1: reread saved artifacts for stale or contradictory claims before reporting done (2.2 handoff kept stale file count)
+2973f377 CLAUDE.md v0.1.1: rerun context boundary procedure on mid-phase requirement changes (procedure only fired at phase start)
+fb078b01 CLAUDE.md v0.1.1: extend no-write/no-permission-change rule to .memory/reference/ (matches 555 lock)
+282633b5 CLAUDE.md v0.1.1: forbid agent permission changes in .memory/knowledge/, stop and ask on permission error (governance)
+b26e38af CLAUDE.md v0.1.1: move memory to top, read SCOPE/index/active entries before first response (fresh session skipped memory)
+8c461b58 memory: add current-state, reference index, allocation table, write-boundary rationale; close demo-suite gaps
+ae75c9ee memory: add first and second decision entry and coding standards knowledge file, update index
+e2af0cec memory: initialize memory directory structure, index, and CLAUDE.md configuration
+f54933e7 docs: add memory architecture document - allocation decision and pruning policy
+```
+
+Verified system: **3d9b2d97**.
+
+### What changed in v0.1.1 and why
+
+| Commit | Change | Evidence that called for it |
+|---|---|---|
+| b26e38af | Memory moved to the top, with startup reads before the first response | Run 0 below: a fresh session skipped memory |
+| 282633b5 | "Never modify file permissions in .memory/knowledge/ without explicit human instruction. If a permission error occurs there, stop and ask." | Governance: without it, an agent that hits a denial could try `chmod` to finish its task |
+| fb078b01 | The same rule extended to `.memory/reference/` | Reference is locked 555 too, and only I add entries there |
+| 2973f377 | The Context Boundary Procedure also runs when a requirement changes mid-phase | 2.2 Exercise 1, Boundary 3: the agent skipped the procedure at the DEMO3 change |
+| 3d9b2d97 | Reread saved artifacts for stale or contradictory claims before reporting done | 2.2 Exercise 1: the saved handoff kept three stale statements |
+
+All five are one version, v0.1.1, with one commit each so every change can be traced or reverted on its own.
+
+### Permission test (inside the container)
+- `whoami` returned `root`.
+- `touch .memory/knowledge/test.md` returned `Permission denied`.
+- `chmod` on `.memory/knowledge/`, `coding-standards.md` and `.memory/reference/` each returned `Permission denied`.
+- Listing: `dr-xr-xr-x` on the directory, `-r--r--r--` on `coding-standards.md`.
+- The lock holds even for root because the repo is bind-mounted from the Mac host, which enforces the 555/444 modes.
+- `CLAUDE.md` (282633b5, fb078b01) backs the filesystem lock with an instruction, so the agent stops and asks instead of trying to work around a denial.
+
+### Run 0: lesson memory check (before v0.1.1). FAIL, diagnosed
+- **Memory state:** fresh session, no pasted memory, `CLAUDE.md` with the memory section at the end of the file.
+- **Result:** the agent answered its first message without reading `.memory/`. It read the files correctly only after it was told to do its startup steps.
+- **Cause:** the memory instructions were the last section of `CLAUDE.md`, and they said "at the start of every session" but didn't tie the reads to the first response. This matches the lesson's troubleshooting item 2, a memory section buried below other sections.
+- **Fix:** b26e38af moved memory to the top and added "Startup (do this before your first response)" with an ordered read list.
+
+Before:
+```
+## Memory Configuration      (line 36, near the end of the file)
+At the start of every session, read .memory/project/MEMORY_INDEX.md
+to orient yourself. Then read any active entries listed there that
+are relevant to the current task.
+```
+
+After:
+```
+## Memory Configuration       (line 10, first section)
+### Startup (do this before your first response)
+Before replying to the first message of any session, read in order:
+1. .memory/SCOPE.md. If it does not match this project, halt and
+ report the mismatch before doing anything else.
+2. .memory/project/MEMORY_INDEX.md.
+3. Every active entry in the index relevant to the task, including
+ current-state.md for the branch you are on.
+Then, in your first reply, briefly state which memory files you read.
+```
+
+### Run 1: Startup-memory check. PASS
+- **Memory state:** new `claude` session in the container (no `--continue` or `--resume`), no memory pasted, `CLAUDE.md` v0.1.1 at 3d9b2d97.
+- **Prompt:** "What project memory, Knowledge Files, and indexed references did you find, and how should each category guide your work here?"
+- **What it reported:**
+  - It ran the startup reads before answering, in order. `SCOPE.md` matched (GIMPL), then `MEMORY_INDEX.md`, then `current-state.md`, `decision-001.md`, `decision-002.md`, `coding-standards.md` and `REFERENCE_INDEX.md`.
+  - It said no review date has passed and the earliest is 2027-02-03.
+  - It said it can write to project memory, carefully. It summarized decision-001 (per-tic traces, bash runner, `demo1-check.sh` unchanged, pinned C build deferred until Rust ports exist, not dropped), decision-002 (`.memory/` merges with its feature branch) and current-state (stubs, next step is the trace line format, DEMO2/DEMO3 and the C build deferred).
+  - It treated knowledge files as read-only, binding rules. It listed all 8 coding standards, noted the directory is `dr-xr-xr-x`, and said it would stop and ask on any permission error there rather than work around it.
+  - It said the reference index lists no documents yet, that it would open references only when a task needs them, and that it never writes there.
+  - It flagged on its own that `current-state.md` says "as of commit ae75c9ee" though six commits have landed since, and confirmed none of them change Feature 1's status.
+- **Against the criteria:** found the intended files (yes), separated changing context from stable knowledge (yes), respected the write policies (yes), summarized accurately (yes).
+- **Cost:** $0.2029, 25s API time, 3m 2s wall time, 0 lines changed. Opus: 8 input, 2.0k output, 149.9k cache read, 16.7k cache write tokens.
+
+### Run 2: Task-resumption check. PASS
+- **Memory state:** same fresh session, directly after Run 1. No memory pasted.
+- **Prompt:** "Resume work on Feature 1. Assess where it stands and propose the next action, but don't change any files yet."
+- **What it did:**
+  - It ran the full Context Boundary Procedure. Its rules list quoted the phase rule ("don't change any files yet"), decision-001, coding standards 3, 4 and 5, the deferred items from current-state, and the read-only rule for knowledge and reference.
+  - It inspected `docs/smoke-tests/demo-suite.md`, `scripts/demo-suite.sh` and the C source (`src/heretic/`), and changed no files.
+  - Its state was accurate: none of the nine tasks is done. The runner is a stub, there is no `-tichash` flag, `tests/` doesn't exist, and `demo1-check.sh` is still the working DEMO1 check. It said this matches current-state.md.
+  - It didn't reopen Approach 2 or DEMO2/DEMO3.
+  - **Proposed next action:** pin the trace line format (task 2), because the hook, trace, manifest and runner all depend on it. It drafted the format, with decimal fields and one `P<n>` group per player, and asked three questions for me to decide: what "inventory count" means, whether to log every tic or only level tics, and whether to include `armortype`.
+  - It kept the order hook, then hook-off check, then reference trace, and noted the reference trace needs my explicit go-ahead under coding standard #4.
+- **Against the criteria:** current state (accurate), standards followed (yes, no edits and the trace approval rule cited), relevant decisions and deferred work recognized (yes), no rejected or deferred approach reconsidered (yes), sensible next action (yes).
+- **Cost:** about $0.16 for this run (session total $0.3622, 54s API time, 6m 54s wall time, 0 lines changed). Session totals for Opus: 522 input, 4.6k output, 337.1k cache read, 25.0k cache write tokens.
+
+### What the fresh session showed that building in one session didn't
+- In the same session the memory always looked like it worked, because the files were already in context. Only a fresh session exposed that the startup reads were tied to the wrong place in `CLAUDE.md`.
+- The stale "as of ae75c9ee" line in `current-state.md` shows the tradeoff of a status file: it's useful to a fresh session, but it drifts with every commit. A short pointer plus the rule to check it against `git log` worked here, since the agent caught the drift itself.
