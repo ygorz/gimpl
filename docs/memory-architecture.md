@@ -96,6 +96,7 @@ Check entries when documents move or features finish. Remove broken entries and 
 | Slack and Gmail credentials, tokens | Never stored | Secrets stay outside GIMPL |
 | One-off session permissions | Not stored | Must not become standing authorization |
 | Large external specs (future) | Indexed reference | Looked up on demand, not loaded at startup |
+| "Reference traces need human approval" | Knowledge file (coding standard 4), decision-001 points to it | Could have stayed only in project memory as part of decision-001. Kept in knowledge so it is read-only and outlives the decision if decision-001 is superseded. Tradeoff: the agent cannot relax it even when a task seems to need it, so it must stop and ask, which adds a human step to every trace change. |
 
 ## Alternatives considered
 

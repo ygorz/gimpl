@@ -10,4 +10,4 @@
 
 **Alternatives rejected:** Pinning a C reference build and comparing live runs (possibly via cargo test) was deferred, not dropped: it needs a second build, tag handling, and a Rust toolchain if run via cargo test. It becomes worthwhile once Rust ports exist.
 
-**Constraint:** Agents must not rewrite reference traces without human approval.
+**Constraint:** Reference traces require human approval (see coding standard 4 in .memory/knowledge/coding-standards.md).
