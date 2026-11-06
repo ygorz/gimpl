@@ -3,6 +3,55 @@
 GIMPL: Chocolate Heretic (C) being ported function by function to Rust,
 verified against built-in demos with blasphem.wad.
 
+Version: v0.1.1
+
+# Agent Instructions
+
+## Memory Configuration
+
+### Startup (do this before your first response)
+
+Before replying to the first message of any session, read in order:
+
+1. .memory/SCOPE.md. If it does not match this project, halt and
+ report the mismatch before doing anything else.
+2. .memory/project/MEMORY_INDEX.md.
+3. Every active entry in the index relevant to the task, including
+ current-state.md for the branch you are on.
+
+Then, in your first reply, briefly state which memory files you read.
+
+Before making any significant decision or observing something worth
+remembering across sessions, check the index for an existing entry
+on the same topic. Update existing entries rather than creating
+duplicates.
+
+### Memory layers
+
+- .memory/project/ — Read on startup via MEMORY_INDEX.md. You may
+ write new entries here when a significant decision is made or
+ project state changes.
+
+- .memory/knowledge/ — Read-only. Consult before making any decision
+ that touches coding standards or architectural constraints. Never
+ attempt to write to this directory.
+
+- .memory/reference/ — Read-only. Check
+ .memory/reference/REFERENCE_INDEX.md when you need background
+ context, and open only the listed documents you need.
+
+### Write policy
+
+Before writing a new memory entry, check MEMORY_INDEX.md for an
+existing entry on the same topic. Update existing entries rather
+than creating new ones. Never write anything classified as
+Confidential or Secret to any memory layer.
+
+### Stale memory policy
+
+If a memory entry's review date has passed, flag it in your session
+output and ask for human confirmation before acting on it.
+
 # Agent Context Boundary Policy
 
 ## Purpose
@@ -30,48 +79,3 @@ Compaction is a last resort. Proactive summarization
 context window exceeds 60% capacity. Before any manual compaction, save the
 current artifact text to its file so the current version does not depend on
 the compaction summary.
-
-# Agent Instructions
-
-## Memory Configuration
-
-At the start of every session, read .memory/project/MEMORY_INDEX.md
-to orient yourself. Then read any active entries listed there that
-are relevant to the current task.
-
-Before making any significant decision or observing something worth
-remembering across sessions, check the index for an existing entry
-on the same topic. Update existing entries rather than creating
-duplicates.
-
-### Memory layers
-
-- .memory/project/ — Read on startup via MEMORY_INDEX.md. You may
- write new entries here when a significant decision is made or
- project state changes.
-
-- .memory/knowledge/ — Read-only. Consult before making any decision
- that touches coding standards or architectural constraints. Never
- attempt to write to this directory.
-
-- .memory/reference/ — Read-only. Query by keyword for relevant
- excerpts when you need background context. Do not read the entire
- directory.
-
-### Write policy
-
-Before writing a new memory entry, check MEMORY_INDEX.md for an
-existing entry on the same topic. Update existing entries rather
-than creating new ones. Never write anything classified as
-Confidential or Secret to any memory layer.
-
-### Stale memory policy
-
-If a memory entry's review date has passed, flag it in your session
-output and ask for human confirmation before acting on it.
-
-### Scope verification
-
-Read SCOPE.md at the root of .memory/ on startup. If it does not
-match this project, halt and report the mismatch before doing
-anything else.
