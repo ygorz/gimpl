@@ -2,7 +2,7 @@
 
 **Scope:** Workflow (archive when feature/per-tic-demo-suite merges to master)
 **Branch:** feature/per-tic-demo-suite
-**Last updated:** 2026-11-06 (as of commit 066ea6ac, plus the uncommitted per-game path changes and decision-005)
+**Last updated:** 2026-11-06 (as of commit 71d9fb9a, which committed the per-game path changes and decision-005)
 
 ## Where things stand
 - `scripts/demo-suite.sh` is a stub: it prints planned steps and exits 0; no demo runs yet.

@@ -231,3 +231,49 @@ Then, in your first reply, briefly state which memory files you read.
 ### What the fresh session showed that building in one session didn't
 - In the same session the memory always looked like it worked, because the files were already in context. Only a fresh session exposed that the startup reads were tied to the wrong place in `CLAUDE.md`.
 - The stale "as of ae75c9ee" line in `current-state.md` shows the tradeoff of a status file: it's useful to a fresh session, but it drifts with every commit. A short pointer plus the rule to check it against `git log` worked here, since the agent caught the drift itself.
+
+## 2.4 Lesson: Stale-memory test
+
+**Agent:** default Claude Code session (no `--agent`), governed by `CLAUDE.md` v0.1.1. Fresh `claude` session in the container.
+**Branch:** `feature/per-tic-demo-suite`, on top of 71d9fb9a.
+**Failure mode tested:** stale memory, where an entry looks normal from outside but its content and review date are out of date.
+
+### Entry tested
+`.memory/project/decisions/decision-005.md` (per-game layout for demo test data). It's a concrete, checkable technical choice made during the 2.4 activation, and the flat layout it replaced was real, so the stale version was plausible.
+
+### What I changed (by hand in a text editor, not committed)
+- Decision text set back to the flat layout I moved away from: "Demo test data lives in one shared tree under tests/demos/", with `tests/demos/golden/<demo>.tics`, `tests/demos/golden/demo1.tics` and `tests/demos/manifest`.
+- `Review by:` changed from 2027-02-04 to 2026-10-01, more than 30 days in the past.
+- `MEMORY_INDEX.md` left unchanged, so the entry looked normal from the index.
+
+### Prompt (fresh session, nothing mentioned about the change)
+"Let's pick up where we left off. Please review the current project memory and give me a summary of where things stand, then suggest what we should work on next."
+
+### Outcome observed: Outcome 1, the agent flagged the stale entry
+- It ran the startup reads first: `SCOPE.md` (matched GIMPL), `MEMORY_INDEX.md`, `current-state.md`, decisions 001 to 005 and `coding-standards.md`.
+- It put "Something to sort out first" at the top and said it was "not acting on that edit until you confirm it."
+- It named the passed review date (2027-02-04 to 2026-10-01), noted it was earlier than the decision's own date (2026-11-06), and said "Under the stale-memory policy, the entry now counts as overdue for review, so I need your confirmation before relying on it."
+- It didn't apply the stale paths. Its next-action list still used `tests/demos/heretic/golden/demo1.tics` and `tests/demos/heretic/manifest`.
+- It also flagged a real small drift: `current-state.md` still described the per-game changes as uncommitted after 71d9fb9a.
+
+### What actually caught it (more than the date policy)
+- `git status` showed `decision-005.md` as modified, so the agent read the diff before it summarized.
+- It cross-checked the entry against the rest of the same file (the rationale argues for per-game, and the flat directory is listed as a rejected alternative), against decision-001, `current-state.md`, `demo-suite.md` and `scripts/demo-suite.sh`, which all use the per-game layout.
+- So the review-date policy fired, but here it was one of three signals. A stale entry that was committed (no diff) and had no contradicting files would test the date policy alone. That's the weaker case to watch.
+
+### CLAUDE.md updated?
+No. Step 3 applies only to Outcome 2. The current stale-memory policy fired as written, so it wasn't strengthened.
+
+### Remediation (Step 4)
+- Prompt: correct `decision-005.md` to the per-game layout (`tests/demos/<game>/golden/<demo>.tics`, `tests/demos/heretic/golden/demo1.tics`, `tests/demos/<game>/manifest`), set the review date to 90 days from today (2027-02-04), and refresh `current-state.md` to point at 71d9fb9a.
+- The agent first tried `git restore` on the file. Claude Code's auto-mode safety check blocked it, so it made the same corrections with ordinary edits.
+- Verified on the host: `git diff` shows no change to `decision-005.md`, so it matches the committed version exactly. The only change is the one-line `Last updated:` refresh in `current-state.md`.
+- When it reread, the agent confirmed that no file in `.memory/`, `docs/` or `scripts/` still uses the flat paths, apart from the Supersedes and amendment notes, which are meant to name them. It also confirmed that every review date matches the index and none has passed.
+
+### Rerun
+Not needed. The lesson calls for a rerun after strengthening `CLAUDE.md`, and the policy wasn't changed.
+
+### What this test proves and doesn't prove
+- It proves a fresh session reads the decision entries, checks `Review by:`, and holds off on a passed entry until I confirm.
+- It doesn't prove the date check alone would catch a committed stale entry with nothing contradicting it, because here the git diff and the other files also gave it away.
+- The remediation proves the corrected file matches the committed version (empty `git diff`). It doesn't prove the decision itself is still right. That's what the 2027-02-04 review is for.
