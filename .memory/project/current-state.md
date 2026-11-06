@@ -2,7 +2,7 @@
 
 **Scope:** Workflow (archive when feature/per-tic-demo-suite merges to master)
 **Branch:** feature/per-tic-demo-suite
-**Last updated:** 2026-11-05 (as of commit ae75c9ee)
+**Last updated:** 2026-11-06 (as of commit d26b46d1)
 
 ## Where things stand
 - `scripts/demo-suite.sh` and `docs/smoke-tests/demo-suite.md` are stubs: the script prints planned steps and exits 0; no demo runs yet.
