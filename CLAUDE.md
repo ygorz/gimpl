@@ -51,6 +51,14 @@ existing entry on the same topic. Update existing entries rather
 than creating new ones. Never write anything classified as
 Confidential or Secret to any memory layer.
 
+### Reread after save
+
+After saving any artifact (memory entry, index, doc, or handoff),
+reread the saved file before reporting it as complete. Check for
+stale dates, leftover references to earlier versions, and claims
+that contradict other entries; fix them, then report what you
+checked.
+
 ### Stale memory policy
 
 If a memory entry's review date has passed, flag it in your session
