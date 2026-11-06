@@ -28,11 +28,12 @@ the suite works, and is kept alongside it afterwards.
    gave byte-identical traces (header plus gametic 0-4226, still 4227
    gametics). No reference trace was generated.
 2. **Trace format.** Done: pinned as v1 below (decision-003).
-3. **Reference trace.** Generate `tests/demos/golden/demo1.tics` from a
-   known-good C build with the fixed run flags (below) and record that
-   commit. Needs explicit human approval before it runs (coding standard 4).
-4. **Manifest.** Add `tests/demos/manifest` with demo name, expected gametics,
-   trace sha256 and the source commit for each demo.
+3. **Reference trace.** Generate `tests/demos/heretic/golden/demo1.tics`
+   from a known-good C build with the fixed run flags (below) and record
+   that commit. Needs explicit human approval before it runs (coding standard 4).
+4. **Manifest.** Add `tests/demos/heretic/manifest` (one manifest per game,
+   decision-005) with demo name, expected gametics, trace sha256 and the
+   source commit for each demo.
 5. **Runner.** Replace the stub body of `scripts/demo-suite.sh` with the
    planned steps: wad check, manifest/trace sha256 check, headless run with
    the fixed run flags (below), tic count check, per-tic comparison by
@@ -57,7 +58,8 @@ traces, which needs human approval (coding standard 4).
 ### File layout
 
 - ASCII text, `\n` line endings, one file per demo
-  (`tests/demos/golden/<demo>.tics`).
+  (`tests/demos/<game>/golden/<demo>.tics`, e.g.
+  `tests/demos/heretic/golden/demo1.tics`; decision-005).
 - Line 1 is this header, exactly:
 
   ```

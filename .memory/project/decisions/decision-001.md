@@ -3,8 +3,9 @@
 **Date:** 2026-11-05
 **Review by:** 2027-02-03
 **Status:** Active
+**Amended:** 2026-11-06 - reference trace path changed from tests/demos/golden/demo1.tics to tests/demos/heretic/golden/demo1.tics, because the repo has several games (path rule in decision-005).
 
-**Decision:** For Feature 1 (the per-tic demo test suite), GIMPL verifies demos against committed per-tic reference traces (starting with tests/demos/golden/demo1.tics), checked by a bash runner, scripts/demo-suite.sh, that sits alongside an unchanged scripts/demo1-check.sh.
+**Decision:** For Feature 1 (the per-tic demo test suite), GIMPL verifies demos against committed per-tic reference traces (starting with tests/demos/heretic/golden/demo1.tics), checked by a bash runner, scripts/demo-suite.sh, that sits alongside an unchanged scripts/demo1-check.sh.
 
 **Rationale:** Committed traces fit the existing bash-and-git-review workflow, are quick to build, and can be diffed in a PR. The runner reports the exact tic and field where a demo drifts, so a desync is pinned down to its point of divergence instead of only showing up as a failed demo.
 

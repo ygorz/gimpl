@@ -6,7 +6,8 @@ Last updated: 2026-11-06
 
 - `decisions/decision-001.md` — Feature 1 (the per-tic demo
  test suite) verifies demos against committed per-tic reference
- traces, checked by scripts/demo-suite.sh. Recorded 2026-11-05.
+ traces, checked by scripts/demo-suite.sh. Recorded 2026-11-05;
+ trace path amended 2026-11-06 (see decision-005).
  Review by 2027-02-03.
 
 - `decisions/decision-002.md` — .memory/ is committed in the
@@ -26,6 +27,11 @@ Last updated: 2026-11-06
  comparison traces always use the fixed run flags (-nodraw
  -nosound, dummy SDL drivers). Recorded 2026-11-06.
  Review by 2027-02-04.
+
+- `decisions/decision-005.md` — Demo test data is laid out per
+ game: traces in tests/demos/<game>/golden/<demo>.tics, one
+ manifest per game at tests/demos/<game>/manifest. Recorded
+ 2026-11-06. Review by 2027-02-04.
 
 - `current-state.md` — Feature 1 status, next action (generate
  the DEMO1 reference trace, needs human approval), and deferred

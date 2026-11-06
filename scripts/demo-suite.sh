@@ -19,14 +19,14 @@ Usage: scripts/demo-suite.sh
 
 Planned steps (DEMO1 only for now):
   1. Verify wads/blasphem.wad sha256 (same pinned value as demo1-check.sh).
-  2. Verify each reference trace in tests/demos/golden/ against the sha256
-     recorded in tests/demos/manifest.
+  2. Verify each reference trace in tests/demos/heretic/golden/ against the
+     sha256 recorded in tests/demos/heretic/manifest.
   3. Run headless: src/chocolate-heretic -iwad wads/blasphem.wad
        -timedemo demo1 -nodraw -nosound -tichash <tmpfile>
   4. Check the 'timed N gametics' line against the manifest (4227 for DEMO1).
   5. Compare the per-tic trace (gametic, rndindex, prndindex, player fields)
-     with tests/demos/golden/demo1.tics; on FAIL, print the first tic that
-     differs and which field changed.
+     with tests/demos/heretic/golden/demo1.tics; on FAIL, print the first
+     tic that differs and which field changed.
 
 Planned exit codes: 0 PASS, 1 FAIL, 2 setup/precondition error.
 EOF
