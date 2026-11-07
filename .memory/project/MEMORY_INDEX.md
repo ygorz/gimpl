@@ -1,6 +1,6 @@
 # Project Memory Index
 
-Last updated: 2026-11-06
+Last updated: 2026-11-07
 
 ## Active entries
 
@@ -33,10 +33,18 @@ Last updated: 2026-11-06
  manifest per game at tests/demos/<game>/manifest. Recorded
  2026-11-06. Review by 2027-02-04.
 
-- `current-state.md` — Feature 1 status, next action (generate
- the DEMO1 reference trace, needs human approval), and deferred
- work. Workflow-scoped; archive when feature/per-tic-demo-suite
- merges. Updated 2026-11-06.
+- `decisions/decision-006.md` — The DEMO1 reference trace
+ tests/demos/heretic/golden/demo1.tics was generated from a clean
+ rebuild at 01044d09 and approved under coding standard 4: binary,
+ WAD and trace sha256, exact invocation, two-run determinism
+ check, exit 255 normal for -timedemo. Recorded 2026-11-07.
+ Review by 2027-02-05.
+
+- `current-state.md` — Feature 1 status (Task 3 done, trace not
+ yet committed), next action (Task 4: the manifest, needs human
+ approval), deferred work and open questions. Workflow-scoped;
+ archive when feature/per-tic-demo-suite merges. Updated
+ 2026-11-07.
 
 - `../knowledge/coding-standards.md` — Coding standards
  for this project. Human-maintained, read-only.

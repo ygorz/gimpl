@@ -28,9 +28,12 @@ the suite works, and is kept alongside it afterwards.
    gave byte-identical traces (header plus gametic 0-4226, still 4227
    gametics). No reference trace was generated.
 2. **Trace format.** Done: pinned as v1 below (decision-003).
-3. **Reference trace.** Generate `tests/demos/heretic/golden/demo1.tics`
-   from a known-good C build with the fixed run flags (below) and record
-   that commit. Needs explicit human approval before it runs (coding standard 4).
+3. **Reference trace.** Done (2026-11-07, approved under coding standard 4):
+   `tests/demos/heretic/golden/demo1.tics` generated with the fixed run flags
+   (below) from a clean build at source commit 01044d09. sha256
+   `537e8a1fd73967c0099d1ee55c0586e353d5240d27dd3a41dfa15ac3757d2f30`.
+   Two runs were byte-identical. Full provenance is in
+   `.memory/project/decisions/decision-006.md`.
 4. **Manifest.** Add `tests/demos/heretic/manifest` (one manifest per game,
    decision-005) with demo name, expected gametics, trace sha256 and the
    source commit for each demo.

@@ -182,6 +182,16 @@ Memory dates never come from the container clock, which is UTC and can read a da
 | One-off session permissions | Not stored | Must not become standing authorization |
 | Large external specs (future) | Indexed reference | Looked up on demand, not loaded at startup |
 | "Reference traces need human approval" | Knowledge file (coding standard 4), decision-001 points to it | Could have stayed only in project memory as part of decision-001. Kept in knowledge so it is read-only and outlives the decision if decision-001 is superseded. Tradeoff: the agent cannot relax it even when a task seems to need it, so it must stop and ask, which adds a human step to every trace change. |
+| Approval and provenance of the DEMO1 reference trace (decision-006) | Project memory, decisions | A human approval with its reasons; outlives the branch; see Layer allocation below |
+
+### Layer allocation
+
+- **`project/decisions/`**: an agreed choice or human approval, with its reasons, that must outlive the branch. Has a review date, and changes only through a recorded amendment (as decision-001 was for decision-005) or a superseding entry.
+- **`project/current-state.md`**: where the current workflow stands, the next action and open questions. It changes every session and is archived when the branch merges.
+- **`knowledge/`**: standing, human-controlled rules such as the coding standards. Read-only to the agent.
+- **`reference/`**: large background material looked up on demand through `REFERENCE_INDEX.md`, not loaded at startup.
+
+**Example, decision-006 (DEMO1 reference trace):** the approval, source commit, hashes, invocation and determinism check go in a decision entry. They record one human approval under a rule and must stay findable after the branch merges. The rule itself ("reference traces require human approval") stays in knowledge as coding standard 4. current-state only says that Task 3 is done and Task 4 is next, and points to decision-006. The trace file belongs in the repo, not in memory. The hashes in decision-006 are a record of what was approved, not the copy the checks read: `scripts/demo1-check.sh` stays the source of truth for the wad sha256, and once the manifest exists (Task 4) it holds the trace sha256 the runner uses.
 
 ## Alternatives considered
 
