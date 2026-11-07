@@ -13,7 +13,8 @@
 - Fixed run flags for generating and comparing traces: `-iwad wads/blasphem.wad -timedemo <demo> -nodraw -nosound -tichash <file>` with the dummy SDL drivers (decision-004).
 - `scripts/demo1-check.sh` remains the working DEMO1 check (wad sha256, 4227 gametics) and stays unchanged.
 - Approach is fixed by decision-001 (committed per-tic reference traces plus a bash runner).
-- The 2.3 memory system (.memory/, docs/memory-architecture.md, CLAUDE.md v0.1.2 — adds data classification and date rules to the write policy) is being finished on this branch.
+- The 2.3 memory system (.memory/, docs/memory-architecture.md, CLAUDE.md v0.1.3) is being finished on this branch. v0.1.2 added data classification and date rules to the write policy; v0.1.3 says a credential is recorded only as its env var name and that a blocked write means stop and tell George.
+- Credentials are kept out of .memory/ by two hooks with the same patterns: the Claude Code PreToolUse hook `scripts/hooks/memory-secret-guard.py` (registered in `.claude/settings.json`, blocks Write/Edit/MultiEdit) and the versioned git hook `scripts/hooks/pre-commit` (install per clone, see its first line). Details and known gaps in docs/memory-architecture.md, Enforcement.
 
 ## Next action
 Task 3: generate `tests/demos/heretic/golden/demo1.tics` with the fixed run flags and record the source commit. This needs explicit human approval before it runs (coding standard 4); do not start it without that. The full ordered task list is in `docs/smoke-tests/demo-suite.md`.

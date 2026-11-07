@@ -3,7 +3,7 @@
 GIMPL: Chocolate Heretic (C) being ported function by function to Rust,
 verified against built-in demos with blasphem.wad.
 
-Version: v0.1.2
+Version: v0.1.3
 
 # Agent Instructions
 
@@ -55,6 +55,21 @@ Before writing any content to a memory file, classify it:
  anywhere. Use it for the immediate task only. If you find a secret
  already written in a memory file, flag it immediately and do not
  proceed until a human removes it.
+
+A credential is recorded in memory only as the name of the env var
+that holds it (for example "read from GIMPL_ARCHIVE_TOKEN"), never
+its value, in any format.
+
+Two hooks enforce this:
+- scripts/hooks/memory-secret-guard.py, a Claude Code PreToolUse
+ hook (registered in .claude/settings.json) that blocks Write, Edit
+ and MultiEdit calls putting credential-like strings into .memory/.
+- scripts/hooks/pre-commit, a git pre-commit hook with the same
+ patterns that blocks commits of them under .memory/. Install it on
+ each clone (see its first line).
+
+If a hook blocks a write, stop and tell George. Never retry the
+write through Bash or any other route.
 
 Dates: George is in America/Denver. The container clock is UTC and
 can read a day ahead, so never take memory dates from the container

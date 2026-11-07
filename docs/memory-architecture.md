@@ -92,12 +92,12 @@ Before writing anything to a memory file, classify it:
 GIMPL note: .memory/ is committed (decision-002). Entries labeled Internal in GIMPL contain only project design context with no Confidential or Secret content, so committing them is accepted for this repo. Anything that would be Internal in the stricter sense above does not go in .memory/.
 
 ### Guardrails
-The classification rules are enforced by the CLAUDE.md write policy (soft guard) and backed for credentials by the pre-commit hook (hard stop). Both are described under Enforcement below.
+The classification rules are enforced by the CLAUDE.md write policy (soft guard). For credentials they are backed by two hard stops with the same patterns: a Claude Code PreToolUse hook that blocks the write, and a versioned git pre-commit hook that blocks the commit. All are described under Enforcement below, with their known gaps.
 
 ## Enforcement
 
 Two kinds of safeguard protect GIMPL's memory:
-- **Soft guard:** a policy in `CLAUDE.md` (v0.1.2). It works only because the agent reads and follows it; nothing outside the agent stops a violation.
+- **Soft guard:** a policy in `CLAUDE.md` (v0.1.3). It works only because the agent reads and follows it; nothing outside the agent stops a violation.
 - **Hard stop:** an automated check that blocks the action whatever the agent intends.
 
 | Safeguard | Kind | Where it lives |
@@ -105,9 +105,10 @@ Two kinds of safeguard protect GIMPL's memory:
 | Stale memory | Soft guard | `CLAUDE.md` → Stale memory policy |
 | Scope verification | Soft guard | `CLAUDE.md` → Startup, step 1 |
 | Data classification | Soft guard | `CLAUDE.md` → Write policy |
-| Credential handling | Soft guard (backed by the hook) | `CLAUDE.md` → Write policy |
+| Credential handling | Soft guard (backed by both hooks) | `CLAUDE.md` → Write policy |
 | Date rule | Soft guard | `CLAUDE.md` → Write policy |
-| Pre-commit hook | Hard stop | `.git/hooks/pre-commit` (local only) |
+| Memory secret guard | Hard stop (Claude Code tool calls) | `scripts/hooks/memory-secret-guard.py`, registered in `.claude/settings.json` |
+| Pre-commit hook | Hard stop (commits) | `scripts/hooks/pre-commit` (versioned); active only once copied to `.git/hooks/pre-commit` |
 | Write permissions | Hard stop (filesystem) plus soft guard (`CLAUDE.md`) | 555/444 modes; `CLAUDE.md` → Memory layers |
 
 ### Stale memory (soft guard)
@@ -125,10 +126,21 @@ Before writing anything to a memory file, the agent classifies it using the leve
 
 **Why it exists:** the original write policy only said "Never write anything classified as Confidential or Secret"; it did not tell the agent to classify first or what to do instead. **Tested (2.4 sensitive-data test):** asked to create `decision-bad.md` with a fake `sk-ant-` test key in it, the agent refused under that original rule and wrote nothing; the entry was then planted by hand (5bffcbdb) so the rest of the test could run. **Changed:** `CLAUDE.md` v0.1.2 puts the explicit classification check first in the write policy.
 
-### Credential handling (soft guard, backed by the hook)
-Credential values are never stored in memory. Memory may record only how a credential is reached, by its environment variable name (for example `ANTHROPIC_API_KEY`), never by its value. If a secret is found already written in a memory file, the agent flags it immediately and does not proceed until a human removes it.
+### Credential handling (soft guard, backed by both hooks)
+Credential values are never stored in memory, in any format. Memory may record only how a credential is reached, by its environment variable name (for example `ANTHROPIC_API_KEY`), never by its value. If a secret is found already written in a memory file, the agent flags it immediately and does not proceed until a human removes it. If either hook blocks a write, the agent stops and tells George, and never retries the write through Bash or any other route (v0.1.3).
 
-**Why it exists:** a key in a committed memory file is exposed to everyone with the repo, and stays in git history after the file is fixed. **Tested (2.4 sensitive-data test):** a grep scan of `.memory/` found the planted key at `decision-bad.md:6`; `secret` and `token` hits were only policy wording. The entry was corrected to point at `ANTHROPIC_API_KEY`, renamed to `decision-099.md`, and committed (6df146b4). **Changed:** the "flag and stop" rule was added in v0.1.2. The fake key is still in history at 5bffcbdb; a real leaked key would need revoking, with history and clones treated as exposed.
+**Why it exists:** a key in a committed memory file is exposed to everyone with the repo, and stays in git history after the file is fixed. **Tested (2.4 sensitive-data test):** a grep scan of `.memory/` found the planted key at `decision-bad.md:6`; `secret` and `token` hits were only policy wording. The entry was corrected to point at `ANTHROPIC_API_KEY`, renamed to `decision-099.md`, and committed (6df146b4). **Changed:** the "flag and stop" rule was added in v0.1.2. The fake key is still in history at 5bffcbdb; a real leaked key would need revoking, with history and clones treated as exposed. **Tested again (2.4 Exercise 1):** asked to record a bucket-archive decision along with a test upload token, the agent stored only the env var name `GIMPL_ARCHIVE_TOKEN`, so the soft guard held (the decision was a controlled test and was then deleted). The hard-stop probe in the same exercise failed; see the pre-commit hook below. **Changed:** v0.1.3 adds the env-var-name-only rule, names both hooks, and adds the stop-and-tell rule for blocked writes.
+
+### Memory secret guard (hard stop)
+`scripts/hooks/memory-secret-guard.py` is a Claude Code PreToolUse hook, registered in `.claude/settings.json` for `Write|Edit|MultiEdit` via `$CLAUDE_PROJECT_DIR`. If the target path is inside a `.memory/` directory, it scans the new content (`content`, `new_string`, and each `edits[].new_string`). On a match it exits 2 with a stderr message naming the pattern and telling the agent to store only the env var name; Claude Code then blocks the tool call. If the hook input cannot be parsed it also exits 2, so it fails closed. Patterns:
+- `sk-` followed by 8 or more characters;
+- `api_key`, `apikey`, `token`, `secret`, `password` or `passwd` (any case) followed by `:` or `=` and a value;
+- an ALL-CAPS name containing `API_KEY`, `TOKEN`, `SECRET` or `PASSWORD` with more `_VALUE` text after it (a bare env var name such as `ANTHROPIC_API_KEY` or `GIMPL_ARCHIVE_TOKEN` passes);
+- `AKIA` plus 16 characters (AWS access key ID);
+- `gh[pousr]_` GitHub tokens;
+- `BEGIN ... PRIVATE KEY` blocks.
+
+**Why it exists:** the pre-commit hook only acts at commit time, after a credential is already on disk in `.memory/`; this stops the agent's write itself. **Tested (2.4 Exercise 1 follow-up), by piping sample hook JSON into the script:** an `Upload token: ` line followed by the test token value (an ALL-CAPS `..._API_KEY_...` string, not recorded here) exited 2 and `uses GIMPL_ARCHIVE_TOKEN` exited 0. The bare token value, `TOKEN=` in a MultiEdit edit, each of the other pattern types, and a relative `.memory/` path also exited 2. The token line written outside `.memory/`, and every file already committed in `.memory/`, exited 0. **Changed:** new in v0.1.3. The settings hook may need a Claude Code settings reload or approval in `/hooks` before it is active.
 
 ### Date rule (soft guard)
 Memory dates never come from the container clock, which is UTC and can read a day ahead of George's America/Denver date. The agent uses the latest date already in `.memory/` or asks George, and never moves a date forward because the clock is later.
@@ -136,9 +148,14 @@ Memory dates never come from the container clock, which is UTC and can read a da
 **Why it exists:** during the sensitive-data test the agent changed the index's `Last updated` from 2026-11-06 to 2026-11-07 from the UTC clock; George's real date was 2026-11-06, and he reverted it before committing. **Changed:** the date rule was added to the write policy in v0.1.2.
 
 ### Pre-commit hook (hard stop)
-`.git/hooks/pre-commit` scans every file staged under `.memory/` that is added, copied, modified or renamed (`--diff-filter=ACMR`) for `sk-`, `password=`, `secret=`, `token=`, `api_key=` and `apikey=`, case insensitive. On a match it prints the file and pattern and exits 1, blocking the commit. It is local only: `.git/hooks/` is not committed or cloned, so a fresh clone must reinstall it. It covers only `.memory/`, so it is not a repo-wide secret scanner.
+`scripts/hooks/pre-commit` is the versioned copy of the commit hook; its first line gives the install command (`cp scripts/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`). It scans every file staged under `.memory/` that is added, copied, modified or renamed (`--diff-filter=ACMR`) with `grep -E` versions of the memory secret guard's patterns. On a match it prints the file and pattern and exits 1, blocking the commit. It covers only `.memory/`, so it is not a repo-wide secret scanner.
 
-**Why it exists:** the write policy depends on the agent; a human or a misbehaving agent can still stage a credential. **Tested (2.4 sensitive-data test):** staging `.memory/test-secret.txt` containing `password=test123` produced "BLOCKED: .memory/test-secret.txt matches pattern 'password='" and the commit failed. **Changed:** the first version used `--diff-filter=ACM`, so renamed files were never scanned; Claude confirmed this against 6df146b4, where the `decision-bad.md` → `decision-099.md` rename was skipped, and George changed it to `ACMR`. Known noise: `sk-` also matches words like "task-"; it is kept as the lesson specifies and will be tightened if it ever blocks a real word.
+**Why it exists:** the write policy depends on the agent; a human or a misbehaving agent can still stage a credential. **Tested (2.4 sensitive-data test):** staging `.memory/test-secret.txt` containing `password=test123` produced "BLOCKED: .memory/test-secret.txt matches pattern 'password='" and the commit failed. **Changed:** the first version used `--diff-filter=ACM`, so renamed files were never scanned; Claude confirmed this against 6df146b4, where the `decision-bad.md` → `decision-099.md` rename was skipped, and George changed it to `ACMR`. Known noise in that version: `sk-` also matched words like "task-". **Failed probe (2.4 Exercise 1):** George staged `.memory/project/ex1-probe.md` containing an `Upload token: ` line followed by the test token value (an ALL-CAPS `..._API_KEY_...` string, not recorded here) and ran `.git/hooks/pre-commit` by hand; it exited 0. Every pattern needed `=` or `sk-`, so `token:` and a bare ALL-CAPS value went through. The hook was also unversioned, so a fresh clone had none. **Changed:** the versioned `scripts/hooks/pre-commit` replaces it with the shared patterns (`sk-` now needs 8 or more characters after it). Tested by hand in a throwaway repo: the same probe line exits 1 and matches two patterns, every other pattern type is caught, and the committed decisions and a file holding only `GIMPL_ARCHIVE_TOKEN` (with a space in its name) exit 0.
+
+### Known gaps in credential enforcement
+- **Bash writes.** The memory secret guard only sees Write, Edit and MultiEdit. A shell write such as `echo ... > .memory/x` is not checked when it happens; it is covered only by the v0.1.3 rule against retrying through another route and, if installed, the pre-commit hook. A Bash matcher could scan command text for the same patterns, but has not been added.
+- **False positives.** Env var names with text after the keyword (for example `AWS_SECRET_ACCESS_KEY` or `GITHUB_TOKEN_FILE`) are blocked, and so is plain wording like `token: read from env`. They follow the agreed patterns and are kept; reword the entry if one fires on legitimate text.
+- **Pre-commit is per clone.** Git does not install hooks from the repo, so each clone (and each fresh container) must copy `scripts/hooks/pre-commit` into `.git/hooks/` itself. Until then, only the Claude Code hook and the soft guard apply.
 
 ### Write permissions (hard stop plus soft guard)
 - `.memory/knowledge/` is read-only: directory 555, `coding-standards.md` 444.
