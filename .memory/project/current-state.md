@@ -2,7 +2,7 @@
 
 **Scope:** Workflow (archive when feature/per-tic-demo-suite merges to master)
 **Branch:** feature/per-tic-demo-suite
-**Last updated:** 2026-11-06 (as of commit 6df146b4, which removed a hardcoded credential from the decision-099 memory entry)
+**Last updated:** 2026-11-06 (as of commit bf3c7b46, which added the credential guards)
 
 ## Where things stand
 - `scripts/demo-suite.sh` is a stub: it prints planned steps and exits 0; no demo runs yet.
