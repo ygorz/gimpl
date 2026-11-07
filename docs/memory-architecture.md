@@ -8,13 +8,14 @@ This agent helps develop GIMPL by porting Chocolate Heretic from C to Rust and c
 ### Belongs here
 - Why Feature 1 uses committed reference traces and a bash runner.
 - Why the pinned C reference-build alternative is deferred.
-- Current Feature 1 status and next action, tied to its branch and commit.
+- Current Feature 1 status and next action, tied to its branch and to the code it describes by SHAs of commits that already exist (for example a trace's source commit). Whether something is staged, committed or pushed is not recorded here; git holds that.
 - Unresolved decisions, once they are settled and recorded (the trace format was one until decision-003).
 
 ### Does not belong here
 - Full traces or source code: those already belong in project artifacts.
 - Credentials: memory must not contain secrets.
 - Old session permissions: they must not become ongoing authorization.
+- Commit status (staged, committed, pushed): git records it and it changes outside memory, so a copy goes stale as soon as a commit lands, as when f66cb067 committed the DEMO1 trace together with memory text calling it untracked; memory names a SHA only once it exists, and git wins on disagreement (CLAUDE.md v0.1.4).
 
 ### Scope
 GIMPL only. Feature-specific entries identify their branch so unfinished work is not mistaken for project-wide state.
@@ -97,7 +98,7 @@ The classification rules are enforced by the CLAUDE.md write policy (soft guard)
 ## Enforcement
 
 Two kinds of safeguard protect GIMPL's memory:
-- **Soft guard:** a policy in `CLAUDE.md` (v0.1.3). It works only because the agent reads and follows it; nothing outside the agent stops a violation.
+- **Soft guard:** a policy in `CLAUDE.md` (v0.1.4). It works only because the agent reads and follows it; nothing outside the agent stops a violation.
 - **Hard stop:** an automated check that blocks the action whatever the agent intends.
 
 | Safeguard | Kind | Where it lives |
@@ -107,6 +108,7 @@ Two kinds of safeguard protect GIMPL's memory:
 | Data classification | Soft guard | `CLAUDE.md` → Write policy |
 | Credential handling | Soft guard (backed by both hooks) | `CLAUDE.md` → Write policy |
 | Date rule | Soft guard | `CLAUDE.md` → Write policy |
+| Git status is not memory | Soft guard (policy only, no hook) | `CLAUDE.md` → Git status is not memory (v0.1.4) |
 | Memory secret guard | Hard stop (Claude Code tool calls) | `scripts/hooks/memory-secret-guard.py`, registered in `.claude/settings.json` |
 | Pre-commit hook | Hard stop (commits) | `scripts/hooks/pre-commit` (versioned); active only once copied to `.git/hooks/pre-commit` |
 | Write permissions | Hard stop (filesystem) plus soft guard (`CLAUDE.md`) | 555/444 modes; `CLAUDE.md` → Memory layers |

@@ -3,6 +3,7 @@
 **Date:** 2026-11-07
 **Review by:** 2027-02-05
 **Status:** Active
+**Status note (2026-11-07):** committed in f66cb067. The "not yet committed" wording below is kept as history; git is the source of truth for commit status (CLAUDE.md v0.1.4).
 **Scope:** Project (the approved reference trace outlives feature/per-tic-demo-suite; every future DEMO1 comparison depends on it)
 **Classification:** Internal (commit ids, file hashes and a command line; no Confidential or Secret content)
 **Approved by:** Human (project owner), in session on 2026-11-07, under coding standard 4

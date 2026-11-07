@@ -3,7 +3,7 @@
 GIMPL: Chocolate Heretic (C) being ported function by function to Rust,
 verified against built-in demos with blasphem.wad.
 
-Version: v0.1.3
+Version: v0.1.4
 
 # Agent Instructions
 
@@ -80,6 +80,14 @@ Before writing a new memory entry, check MEMORY_INDEX.md for an
 existing entry on the same topic. Update existing entries rather
 than creating new ones. Never write anything classified as
 Confidential or Secret to any memory layer.
+
+### Git status is not memory
+
+Memory must not record git status (staged, committed, pushed) as a
+lasting fact; git is the source of truth for it. If an entry
+mentions a commit, use its SHA only after that commit exists, never
+a planned or expected one. On startup, if memory and git disagree,
+git wins: flag the disagreement in your first reply.
 
 ### Reread after save
 

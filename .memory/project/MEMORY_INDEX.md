@@ -40,8 +40,9 @@ Last updated: 2026-11-07
  check, exit 255 normal for -timedemo. Recorded 2026-11-07.
  Review by 2027-02-05.
 
-- `current-state.md` — Feature 1 status (Task 3 done, trace not
- yet committed), next action (Task 4: the manifest, needs human
+- `current-state.md` — Feature 1 status (Task 3 done, trace
+ committed in f66cb067 on 2026-11-07; git is the source of truth
+ for commit status), next action (Task 4: the manifest, needs human
  approval), deferred work and open questions. Workflow-scoped;
  archive when feature/per-tic-demo-suite merges. Updated
  2026-11-07.
