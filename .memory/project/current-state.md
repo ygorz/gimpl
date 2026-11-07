@@ -2,7 +2,7 @@
 
 **Scope:** Workflow (archive when feature/per-tic-demo-suite merges to master)
 **Branch:** feature/per-tic-demo-suite
-**Last updated:** 2026-11-06 (as of commit 71d9fb9a, which committed the per-game path changes and decision-005)
+**Last updated:** 2026-11-06 (as of commit 6df146b4, which removed a hardcoded credential from the decision-099 memory entry)
 
 ## Where things stand
 - `scripts/demo-suite.sh` is a stub: it prints planned steps and exits 0; no demo runs yet.
@@ -13,7 +13,7 @@
 - Fixed run flags for generating and comparing traces: `-iwad wads/blasphem.wad -timedemo <demo> -nodraw -nosound -tichash <file>` with the dummy SDL drivers (decision-004).
 - `scripts/demo1-check.sh` remains the working DEMO1 check (wad sha256, 4227 gametics) and stays unchanged.
 - Approach is fixed by decision-001 (committed per-tic reference traces plus a bash runner).
-- The 2.3 memory system (.memory/, docs/memory-architecture.md, CLAUDE.md v0.1.1) is being finished on this branch.
+- The 2.3 memory system (.memory/, docs/memory-architecture.md, CLAUDE.md v0.1.2 — adds data classification and date rules to the write policy) is being finished on this branch.
 
 ## Next action
 Task 3: generate `tests/demos/heretic/golden/demo1.tics` with the fixed run flags and record the source commit. This needs explicit human approval before it runs (coding standard 4); do not start it without that. The full ordered task list is in `docs/smoke-tests/demo-suite.md`.

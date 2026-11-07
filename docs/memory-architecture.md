@@ -82,6 +82,18 @@ Check entries when documents move or features finish. Remove broken entries and 
 - If the 90-day review keeps finding nothing to change, lengthen it.
 - When GIMPL moves past Feature 1 into many parallel features, review per feature merge instead of on a fixed calendar.
 
+## Data Classification
+Before writing anything to a memory file, classify it:
+- **Public** — Safe to commit to the repo and share broadly. Most project decisions and coding standards fall here.
+- **Internal** — Safe within the team but not for public repos. Store in a non-committed volume or .gitignore the containing folder.
+- **Confidential** — Sensitive business data. Do not store in agent memory. Retrieve from secure systems on demand.
+- **Secret** — Credentials, tokens, API keys, PII. Must never appear in any memory file. If the agent encounters a secret during a run, use it for the immediate task only and explicitly do not write it to any memory layer. Reference the environment variable name instead.
+
+GIMPL note: .memory/ is committed (decision-002). Entries labeled Internal in GIMPL contain only project design context with no Confidential or Secret content, so committing them is accepted for this repo. Anything that would be Internal in the stricter sense above does not go in .memory/.
+
+### Guardrails
+A pre-commit hook at .git/hooks/pre-commit scans staged files under .memory/ for common credential patterns (sk-, password=, secret=, token=, api_key=, apikey=, case insensitive) before each commit. If a pattern is found, the commit is blocked and the file and pattern are printed. The hook is local only: .git/hooks/ is not committed or cloned, so a fresh clone must reinstall it. Tested 2026-11-06: it blocked .memory/test-secret.txt containing password=test123.
+
 ## Allocation decision table
 
 | Information | Where it goes | Why |

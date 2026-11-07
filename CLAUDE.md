@@ -3,7 +3,7 @@
 GIMPL: Chocolate Heretic (C) being ported function by function to Rust,
 verified against built-in demos with blasphem.wad.
 
-Version: v0.1.1
+Version: v0.1.2
 
 # Agent Instructions
 
@@ -45,6 +45,21 @@ duplicates.
  instruction. If a permission error occurs there, stop and ask.
 
 ### Write policy
+
+Before writing any content to a memory file, classify it:
+- If it is Public or Internal: proceed with writing.
+- If it is Confidential: do not write it to memory. Note in your
+ response that the information was not stored and explain where it
+ should be retrieved from instead.
+- If it is Secret (credential, token, API key, PII): do not write it
+ anywhere. Use it for the immediate task only. If you find a secret
+ already written in a memory file, flag it immediately and do not
+ proceed until a human removes it.
+
+Dates: George is in America/Denver. The container clock is UTC and
+can read a day ahead, so never take memory dates from the container
+clock. Use the latest date already in .memory/ or ask George, and
+never move a date forward just because the clock is later.
 
 Before writing a new memory entry, check MEMORY_INDEX.md for an
 existing entry on the same topic. Update existing entries rather
