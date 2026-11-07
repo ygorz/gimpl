@@ -461,3 +461,61 @@ hook exit: 1
   - Patterns can't catch every secret shape (a random value with no keyword gets through), and there are false positives, such as `AWS_SECRET_ACCESS_KEY` or wording like "token: read from env".
   - The commit hook still has to be installed on each clone, and `git commit --no-verify` skips it.
 - **Production limitation:** a real team would add a repo-wide secret scanner in CI, which can't be skipped locally, plus a secrets manager. Any leaked real key would be revoked, with history and clones treated as exposed. The earlier lesson's fake key is still in history at `5bffcbdb`.
+
+## Module 2 Lab: Advance Your Agentic System
+
+### Track and why
+- **Primary track:** Track 1, built-in agents plus stronger project memory.
+- **Why:** before picking, I reviewed what Feature 1 (per-tic demo suite) needed next. Task 3, the DEMO1 reference trace, was the blocker for everything after it (manifest, runner, PASS/FAIL tests). That work produces provenance (source commit, binary and trace hashes, an approval under coding standard 4) that a future session can't rebuild from the repo alone. So memory was the part of the system that had to get stronger. Calibrating one agent (Track 2) or adding three components (Track 3) fits Module 3, where the per-tic suite becomes the orchestrated task.
+- **Agent:** the default GIMPL Claude Code session (built-in agent) in the course container, governed by `CLAUDE.md`. No custom agent was used.
+
+### Starting state
+```
+lesson-4-lab-start -> 01044d09 docs: log 2.4 Exercise 1 sensitive-data failure and remediation
+```
+`git status -sb` was clean and in sync with `origin/feature/per-tic-demo-suite` before tagging. CLAUDE.md was v0.1.3.
+
+### Run 1: fresh-session orientation (at 01044d09, before any lab work)
+- **How started:** plain `claude`, no `--continue` or `--resume`, nothing pasted. Prompt asked which memory files it read, where Feature 1 stands, whether a per-tic trace is committed, and the next step, with no file changes.
+- **Observed:** it reported reading `.memory/SCOPE.md`, `MEMORY_INDEX.md`, and all active entries (current-state, decisions 001 to 005, `knowledge/coding-standards.md`), and checked that no review date had passed. It correctly said `scripts/demo-suite.sh` is still a stub, no trace is committed (`tests/` didn't exist), and the next step is Task 3 with the exact decision-004 invocation. It stopped at the coding standard 4 gate ("This needs your explicit approval first") and raised an issue I hadn't asked about: the existing binary might not match a commit, so it should be rebuilt before generating a reference trace.
+- **What changed in response:** nothing in memory. I approved Task 3 with a clean rebuild at HEAD, which Claude's own provenance concern justified.
+
+### Real work: Task 3, DEMO1 golden trace (commit f66cb067)
+- Claude ran `make clean` and `make` at source commit `01044d09` (src/ unchanged since `066ea6ac`), then ran DEMO1 twice with the decision-004 invocation.
+- **Evidence:** both runs reported 4227 gametics and exit 255 (normal for `-timedemo`). Both traces had sha256 `537e8a1fd73967c0099d1ee55c0586e353d5240d27dd3a41dfa15ac3757d2f30`, 340359 bytes and 4228 lines (1 header plus 4227 tic lines), and `cmp` found no differences. The format matched `#tichash v1` with LF endings.
+- I ran git myself: `f66cb067 feature1: add DEMO1 per-tic golden trace and decision-006 (Task 3)`.
+
+### Memory entries added, and why each layer
+- **`.memory/project/decisions/decision-006.md` (new, decision layer):** the DEMO1 trace approval under coding standard 4, with source commit, binary, WAD and trace hashes, the exact invocation, the two-run determinism check, and that exit 255 is not a FAIL. *Why decision:* it's a one-time human approval with provenance that must outlive the branch. It isn't a standing rule (that's knowledge) or a workflow status (that's current-state).
+- **`.memory/project/current-state.md` (revised):** Task 3 done, next is Task 4 (manifest, which also needs approval), plus open questions (DEMO3 still deferred; whether "clean rebuild at a recorded commit before any reference trace" should become a standing rule). It's written as a question, not a rule, because I haven't decided yet.
+- **`MEMORY_INDEX.md`:** a decision-006 row plus a refreshed current-state entry.
+- **`docs/memory-architecture.md`:** a new "Layer allocation" section that says what belongs in decisions, current-state, knowledge and reference, using decision-006 as the example.
+- **Date:** Claude asked me which date to use instead of reading the container's UTC clock (the CLAUDE.md v0.1.2 date rule). I gave 2026-11-07, today in Denver.
+- **Self-corrections on reread:** the path went into the existing `.memory/project/decisions/` folder instead of the path I'd written; "George commits it himself" was reworded; and the layer note was fixed for decision-001 being amended in place. Claude also noticed a stale line in current-state about demo-suite.md after it updated the tracker, and reworded it once I said yes.
+
+### Run 2: fresh-session check after the commit (at f66cb067)
+- **How started:** `/exit`, then plain `claude`, nothing pasted. Prompt asked where the trace is, its commit and hash, whether it's committed, the next task and its approval, which memory files it used, and to flag anything that disagrees with the repo.
+- **Observed:** it answered from decision-005, decision-006 and current-state, and checked the hash and source commit against the file on disk and git. It said the trace was committed in `f66cb067` and the tree was clean, and "Memory says the opposite ... so this answer comes from git, not memory." It flagged three stale lines: current-state ("generated but not yet committed" / "The trace is untracked"), MEMORY_INDEX ("trace not yet committed"), and decision-006 ("not yet committed at time of writing").
+- **Diagnosis:** the session used memory correctly, but memory itself went stale the moment I committed. That's because the entries recorded git status (untracked or committed), which changes outside the agent. A later session that didn't cross-check git could have reported the trace as uncommitted.
+
+### Revision (commit e9a67294, CLAUDE.md v0.1.3 to v0.1.4)
+```
+e9a67294 memory: git status is not memory (CLAUDE.md v0.1.4)
+```
+- **Entries fixed:** current-state and MEMORY_INDEX now say committed in `f66cb067` (2026-11-07). decision-006 keeps its history line with a "Status: committed in f66cb067" note.
+- **New CLAUDE.md rule, "Git status is not memory":** memory doesn't record staged, committed or pushed status as a lasting fact, because git is the source of truth. A commit's SHA goes into memory only after that commit exists. On startup, if memory and git disagree, git wins and the agent flags it in its first reply.
+- **`docs/memory-architecture.md`:** a "Does not belong here" line explaining that commit status belongs to git, citing `f66cb067` as the case. Line 11 was reworded so SHAs tie a status to code without storing commit status. There's also a new Enforcement table row ("Soft guard, policy only, no hook").
+
+### Run 3: confirmation rerun (at e9a67294, planted probe)
+- **Setup:** I appended an uncommitted false line to current-state.md: `- Trace status: demo1.tics is not yet committed (TEST PROBE, do not keep).` Then `/exit` and plain `claude`, nothing pasted.
+- **Prompt:** "Has the DEMO1 golden trace been committed, and in which commit? Tell me which source you trusted and why, and flag anything in memory that disagrees."
+- **Observed:** it answered "Yes, the trace is committed in f66cb067", said it trusted git because CLAUDE.md v0.1.4 makes git the source of truth, and verified with `git log -- tests/demos/heretic/golden/demo1.tics`, the remote, and the file's sha256 against decision-006. It flagged the planted line as an uncommitted change that "records git status as a lasting fact, which v0.1.4 forbids", noted it contradicts the same file's "Where things stand" section, offered `git checkout` to restore it, and changed no files. It treated decision-006's historical wording as consistent with the policy, which is correct.
+- **Cleanup:** `git checkout -- .memory/project/current-state.md`. `git status -sb` was clean at `e9a67294`.
+- **Recorded:** the test went into a new "Git status is not memory (soft guard)" subsection of `docs/memory-architecture.md` (Why it exists / Tested / Changed), with its limit stated.
+
+### Result
+**Pass.** Fresh sessions found and used the new entries without pasted memory, `--continue` or `--resume` (Runs 1 to 3). Run 2 surfaced a real gap (memory recording git status went stale at commit). The v0.1.4 revision targeted that gap, and Run 3 confirmed it held: git won over a planted false memory line, and the session flagged it without editing anything.
+
+### Limits and next step
+- The planted line was an uncommitted edit, so `git status` itself was a clue. A stale status line that's already committed, with nothing contradicting it, hasn't been tested. The rule is policy only, with no hook.
+- **Next:** Task 4, the manifest (`tests/demos/heretic/manifest` with demo1, 4227 gametics, trace sha256, source commit `01044d09`), which needs my approval under coding standard 4. Then Task 5, turning `scripts/demo-suite.sh` from a stub into the real runner. That's when Feature 1 actually passes and can merge.

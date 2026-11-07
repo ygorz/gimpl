@@ -149,6 +149,11 @@ Memory dates never come from the container clock, which is UTC and can read a da
 
 **Why it exists:** during the sensitive-data test the agent changed the index's `Last updated` from 2026-11-06 to 2026-11-07 from the UTC clock; George's real date was 2026-11-06, and he reverted it before committing. **Changed:** the date rule was added to the write policy in v0.1.2.
 
+### Git status is not memory (soft guard)
+Memory does not record whether something is staged, committed or pushed as a lasting fact; git is the source of truth for that. An entry names a commit by SHA only once that commit exists, never a planned or expected one. On startup, if memory and git disagree, git wins and the agent flags the disagreement in its first reply. There is no hook for this rule; it relies on the agent following `CLAUDE.md`.
+
+**Why it exists:** commit status changes outside memory, so a copy of it goes stale as soon as a commit lands. f66cb067 committed the DEMO1 trace together with memory text that still called it untracked. **Tested (v0.1.4 git-status probe):** a fresh session at e9a67294 was given an uncommitted line, "demo1.tics is not yet committed (TEST PROBE)", planted in `current-state.md`, and asked whether the trace was committed. It trusted git and reported f66cb067. It flagged the planted line as violating v0.1.4 and edited nothing. **Changed:** nothing; the policy fired as written. Limit: the planted line was an uncommitted edit, and the committed text of `current-state.md` contradicted it, so the agent had signals besides the rule itself. A committed wrong status with nothing contradicting it has not been tested.
+
 ### Pre-commit hook (hard stop)
 `scripts/hooks/pre-commit` is the versioned copy of the commit hook; its first line gives the install command (`cp scripts/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`). It scans every file staged under `.memory/` that is added, copied, modified or renamed (`--diff-filter=ACMR`) with `grep -E` versions of the memory secret guard's patterns. On a match it prints the file and pattern and exits 1, blocking the commit. It covers only `.memory/`, so it is not a repo-wide secret scanner.
 
