@@ -3,7 +3,7 @@
 Last updated: 2026-11-06
 
 ## Active entries
-- `decisions/decision-bad.md` — API connection approach using service account. Recorded 2026-11-06. Review by 2027-02-04.
+- `decisions/decision-099.md` — API connection approach using service account. Recorded 2026-11-06. Review by 2027-02-04.
 
 - `decisions/decision-001.md` — Feature 1 (the per-tic demo
  test suite) verifies demos against committed per-tic reference
