@@ -476,6 +476,7 @@ lesson-4-lab-start -> 01044d09 docs: log 2.4 Exercise 1 sensitive-data failure a
 `git status -sb` was clean and in sync with `origin/feature/per-tic-demo-suite` before tagging. CLAUDE.md was v0.1.3.
 
 ### Run 1: fresh-session orientation (at 01044d09, before any lab work)
+- **Memory state:** `01044d09`, CLAUDE.md v0.1.3.
 - **How started:** plain `claude`, no `--continue` or `--resume`, nothing pasted. Prompt asked which memory files it read, where Feature 1 stands, whether a per-tic trace is committed, and the next step, with no file changes.
 - **Observed:** it reported reading `.memory/SCOPE.md`, `MEMORY_INDEX.md`, and all active entries (current-state, decisions 001 to 005, `knowledge/coding-standards.md`), and checked that no review date had passed. It correctly said `scripts/demo-suite.sh` is still a stub, no trace is committed (`tests/` didn't exist), and the next step is Task 3 with the exact decision-004 invocation. It stopped at the coding standard 4 gate ("This needs your explicit approval first") and raised an issue I hadn't asked about: the existing binary might not match a commit, so it should be rebuilt before generating a reference trace.
 - **What changed in response:** nothing in memory. I approved Task 3 with a clean rebuild at HEAD, which Claude's own provenance concern justified.
@@ -494,6 +495,7 @@ lesson-4-lab-start -> 01044d09 docs: log 2.4 Exercise 1 sensitive-data failure a
 - **Self-corrections on reread:** the path went into the existing `.memory/project/decisions/` folder instead of the path I'd written; "George commits it himself" was reworded; and the layer note was fixed for decision-001 being amended in place. Claude also noticed a stale line in current-state about demo-suite.md after it updated the tracker, and reworded it once I said yes.
 
 ### Run 2: fresh-session check after the commit (at f66cb067)
+- **Memory state:** `f66cb067`, CLAUDE.md v0.1.3 (decision-006 and the updated current-state and index now in memory).
 - **How started:** `/exit`, then plain `claude`, nothing pasted. Prompt asked where the trace is, its commit and hash, whether it's committed, the next task and its approval, which memory files it used, and to flag anything that disagrees with the repo.
 - **Observed:** it answered from decision-005, decision-006 and current-state, and checked the hash and source commit against the file on disk and git. It said the trace was committed in `f66cb067` and the tree was clean, and "Memory says the opposite ... so this answer comes from git, not memory." It flagged three stale lines: current-state ("generated but not yet committed" / "The trace is untracked"), MEMORY_INDEX ("trace not yet committed"), and decision-006 ("not yet committed at time of writing").
 - **Diagnosis:** the session used memory correctly, but memory itself went stale the moment I committed. That's because the entries recorded git status (untracked or committed), which changes outside the agent. A later session that didn't cross-check git could have reported the trace as uncommitted.
@@ -503,10 +505,13 @@ lesson-4-lab-start -> 01044d09 docs: log 2.4 Exercise 1 sensitive-data failure a
 e9a67294 memory: git status is not memory (CLAUDE.md v0.1.4)
 ```
 - **Entries fixed:** current-state and MEMORY_INDEX now say committed in `f66cb067` (2026-11-07). decision-006 keeps its history line with a "Status: committed in f66cb067" note.
-- **New CLAUDE.md rule, "Git status is not memory":** memory doesn't record staged, committed or pushed status as a lasting fact, because git is the source of truth. A commit's SHA goes into memory only after that commit exists. On startup, if memory and git disagree, git wins and the agent flags it in its first reply.
+- **New CLAUDE.md rule (v0.1.4), verbatim:**
+  > "Memory must not record git status (staged, committed, pushed) as a lasting fact; git is the source of truth for it. If an entry mentions a commit, use its SHA only after that commit exists, never a planned or expected one. On startup, if memory and git disagree, git wins: flag the disagreement in your first reply."
+- **Why this fix and not another:** the Run 2 failure wasn't one wrong line. Any status copied into memory goes stale as soon as a commit lands, so fixing the three lines alone would recur on the next commit. The rule removes the cause, and the "git wins" clause covers any stale line that still slips in. current-state's header now says "commit status of anything below: check git, which wins over this file".
 - **`docs/memory-architecture.md`:** a "Does not belong here" line explaining that commit status belongs to git, citing `f66cb067` as the case. Line 11 was reworded so SHAs tie a status to code without storing commit status. There's also a new Enforcement table row ("Soft guard, policy only, no hook").
 
 ### Run 3: confirmation rerun (at e9a67294, planted probe)
+- **Memory state:** `e9a67294`, CLAUDE.md v0.1.4.
 - **Setup:** I appended an uncommitted false line to current-state.md: `- Trace status: demo1.tics is not yet committed (TEST PROBE, do not keep).` Then `/exit` and plain `claude`, nothing pasted.
 - **Prompt:** "Has the DEMO1 golden trace been committed, and in which commit? Tell me which source you trusted and why, and flag anything in memory that disagrees."
 - **Observed:** it answered "Yes, the trace is committed in f66cb067", said it trusted git because CLAUDE.md v0.1.4 makes git the source of truth, and verified with `git log -- tests/demos/heretic/golden/demo1.tics`, the remote, and the file's sha256 against decision-006. It flagged the planted line as an uncommitted change that "records git status as a lasting fact, which v0.1.4 forbids", noted it contradicts the same file's "Where things stand" section, offered `git checkout` to restore it, and changed no files. It treated decision-006's historical wording as consistent with the policy, which is correct.
