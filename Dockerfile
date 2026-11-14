@@ -30,6 +30,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsdl2-net-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# MCP servers (Module 3): coursetools needs the mcp package; fastmcp is for 3.2
+RUN pip install --no-cache-dir "mcp<2" fastmcp
+
 # Install Claude Code
 RUN npm install -g @anthropic-ai/claude-code
 
