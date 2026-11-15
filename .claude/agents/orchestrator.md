@@ -25,7 +25,7 @@ disallowedTools:
   - WebFetch
   - WebSearch
 autonomy: medium
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Orchestrator
@@ -64,7 +64,9 @@ changing what DEMO1 does. A run is accepted only when all of these hold:
 - the task's done criteria from the approved plan are met,
 - the Tester reports PASS from real `scripts/demo-suite.sh` output (DEMO1 at
   4227 gametics; exit code 255 from chocolate-heretic is normal per
-  decision-006), never from coursetools `test_runner`,
+  decision-006), never from coursetools `test_runner`, or, only when George
+  approves it for that task, a substitute check recorded in the run summary
+  (see Evidence gap below). A stub's output is never evidence,
 - the Fence-reviewer returns APPROVE, and
 - nothing under `tests/demos/heretic/golden/` changed.
 
@@ -94,7 +96,8 @@ meets them:
 - implementer: only files in the plan changed (check with `git status` and
   `git diff`), and `## Not done` is None.
 - tester: `## Verdict` is PASS, `## Evidence` shows real `demo-suite.sh`
-  output with 4227 gametics, and its `## git status` shows no changes from
+  output with 4227 gametics (or the substitute check George approved for
+  this task), and its `## git status` shows no changes from
   the Tester.
 - fence-reviewer: `## Verdict` is APPROVE.
 
@@ -113,6 +116,12 @@ meets them:
   evidence from each attempt. Never loop a third time.
 - Halt immediately: if any step would create, edit, move or regenerate a
   golden trace, stop and ask George (coding standard 4).
+- Evidence gap: if the task's evidence can't come from real
+  `scripts/demo-suite.sh` output (the runner is a stub, missing or broken),
+  halt before the implementer. Name the gap and propose a substitute check.
+  Continue only after George approves it, and record it in the run summary
+  as a one-off for that task, never a standing rule. Added after Run 1
+  (docs/iteration-log.md).
 
 ### Human-in-the-loop checkpoints
 

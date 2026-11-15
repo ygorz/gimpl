@@ -2,7 +2,7 @@
 
 **Scope:** Workflow (archive when feature/per-tic-demo-suite merges to master)
 **Branch:** feature/per-tic-demo-suite
-**Last updated:** 2026-11-14 (commit status of anything below: check git, which wins over this file; CLAUDE.md v0.1.5)
+**Last updated:** 2026-11-14 (commit status of anything below: check git, which wins over this file; CLAUDE.md v0.1.6)
 
 ## Where things stand
 - `scripts/demo-suite.sh` is a stub: it prints planned steps and exits 0; no demo runs yet.
@@ -21,7 +21,7 @@
 - Credentials are kept out of .memory/ by two hooks with the same patterns: the Claude Code PreToolUse hook `scripts/hooks/memory-secret-guard.py` (registered in `.claude/settings.json`, blocks Write/Edit/MultiEdit) and the versioned git hook `scripts/hooks/pre-commit` (install per clone, see its first line). Details and known gaps in docs/memory-architecture.md, Enforcement.
 
 ## Next action
-Task 5: replace the stub body of `scripts/demo-suite.sh` with the runner: wad check, manifest/trace sha256 check (reading `tests/demos/heretic/manifest`), headless run with the fixed run flags, tic count check, per-tic comparison by gametic reporting the first tic and field that differ, exit codes 0/1/2, and engine exit 255 not treated as FAIL (decision-006). It goes through the Orchestrator workflow (CLAUDE.md v0.1.5). The full ordered task list is in `docs/smoke-tests/demo-suite.md`.
+Task 5: replace the stub body of `scripts/demo-suite.sh` with the runner: wad check, manifest/trace sha256 check (reading `tests/demos/heretic/manifest`), headless run with the fixed run flags, tic count check, per-tic comparison by gametic reporting the first tic and field that differ, exit codes 0/1/2, and engine exit 255 not treated as FAIL (decision-006). It goes through the Orchestrator workflow (CLAUDE.md v0.1.6). The full ordered task list is in `docs/smoke-tests/demo-suite.md`.
 
 ## Deferred (do not reopen without a human decision)
 - Pinned C reference build (Approach 2): deferred in decision-001.
