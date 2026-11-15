@@ -34,9 +34,13 @@ the suite works, and is kept alongside it afterwards.
    `537e8a1fd73967c0099d1ee55c0586e353d5240d27dd3a41dfa15ac3757d2f30`.
    Two runs were byte-identical. Full provenance is in
    `.memory/project/decisions/decision-006.md`.
-4. **Manifest.** Add `tests/demos/heretic/manifest` (one manifest per game,
-   decision-005) with demo name, expected gametics, trace sha256 and the
-   source commit for each demo.
+4. **Manifest.** Done (approved under coding standard 4):
+   `tests/demos/heretic/manifest` (one manifest per game, decision-005).
+   Format: `#` comment lines, then one line per demo:
+   `<demo> <gametics> <trace_sha256> <source_commit>`, space-separated, with
+   the full 40-character source commit SHA. The trace path is
+   `tests/demos/heretic/golden/<demo>.tics` by convention. The demo1 values
+   are in `.memory/project/decisions/decision-006.md`.
 5. **Runner.** Replace the stub body of `scripts/demo-suite.sh` with the
    planned steps: wad check, manifest/trace sha256 check, headless run with
    the fixed run flags (below), tic count check, per-tic comparison by

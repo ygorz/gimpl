@@ -1,0 +1,5 @@
+# Manifest for Heretic demos (decision-005). One line per demo:
+# demo gametics trace_sha256 source_commit
+# Trace path: tests/demos/heretic/golden/<demo>.tics
+# Values for demo1: decision-006. Changing this file needs human approval (coding standard 4).
+demo1 4227 537e8a1fd73967c0099d1ee55c0586e353d5240d27dd3a41dfa15ac3757d2f30 01044d09d232bcd7684fce42661f6b5310b57200

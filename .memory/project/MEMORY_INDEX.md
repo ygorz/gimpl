@@ -1,6 +1,6 @@
 # Project Memory Index
 
-Last updated: 2026-11-07
+Last updated: 2026-11-14
 
 ## Active entries
 
@@ -40,12 +40,12 @@ Last updated: 2026-11-07
  check, exit 255 normal for -timedemo. Recorded 2026-11-07.
  Review by 2027-02-05.
 
-- `current-state.md` — Feature 1 status (Task 3 done, trace
- committed in f66cb067 on 2026-11-07; git is the source of truth
- for commit status), next action (Task 4: the manifest, needs human
- approval), deferred work and open questions. Workflow-scoped;
+- `current-state.md` — Feature 1 status (Task 3 trace committed
+ in f66cb067 on 2026-11-07; Task 4 manifest done 2026-11-14; git
+ is the source of truth for commit status), next action (Task 5:
+ the runner), deferred work and open questions. Workflow-scoped;
  archive when feature/per-tic-demo-suite merges. Updated
- 2026-11-07.
+ 2026-11-14.
 
 - `../knowledge/coding-standards.md` — Coding standards
  for this project. Human-maintained, read-only.

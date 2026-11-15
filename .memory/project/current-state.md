@@ -2,7 +2,7 @@
 
 **Scope:** Workflow (archive when feature/per-tic-demo-suite merges to master)
 **Branch:** feature/per-tic-demo-suite
-**Last updated:** 2026-11-07 (commit status of anything below: check git, which wins over this file; CLAUDE.md v0.1.4)
+**Last updated:** 2026-11-14 (commit status of anything below: check git, which wins over this file; CLAUDE.md v0.1.5)
 
 ## Where things stand
 - `scripts/demo-suite.sh` is a stub: it prints planned steps and exits 0; no demo runs yet.
@@ -11,7 +11,9 @@
 - The hook-off check passed (task 6): `scripts/demo1-check.sh` reports 4227 gametics with the hook built in and the flag not set.
 - Task 3 is done: the DEMO1 reference trace `tests/demos/heretic/golden/demo1.tics` exists, approved under coding standard 4, from a clean rebuild at 01044d09. Two runs were byte-identical (4227 gametics, 4228 lines). Provenance, hashes and the exact invocation are in decision-006. The trace was committed in f66cb067 (2026-11-07); git is the source of truth for its current status.
 - `docs/smoke-tests/demo-suite.md` now marks Task 3 done, with the trace sha256 and a pointer to decision-006.
-- Demo test data is laid out per game (decision-005): traces in `tests/demos/<game>/golden/<demo>.tics`, manifest at `tests/demos/<game>/manifest`. `tests/demos/heretic/manifest` does not exist yet.
+- Task 4 is done (2026-11-14, approved by George under coding standard 4): `tests/demos/heretic/manifest` exists. Format: `#` comment lines, then one line per demo, `<demo> <gametics> <trace_sha256> <source_commit>`, space-separated, full 40-character source commit SHA; trace path is `tests/demos/heretic/golden/<demo>.tics` by convention. Its demo1 line uses decision-006's values (4227 gametics, trace sha256 537e8a1f…2f30, source commit 01044d09d232bcd7684fce42661f6b5310b57200). Per decision-006, the manifest is now the repo's source of truth for the trace sha256 and source commit. `docs/smoke-tests/demo-suite.md` marks Task 4 done. Run record: `docs/runs/feature1-task4-run-1.md` (Tester PASS, Fence-reviewer APPROVE). Git is the source of truth for whether this change is committed.
+- Task 4 acceptance used a one-off exception George approved: `scripts/demo1-check.sh` plus the trace sha256 check stood in as DEMO1 evidence because `scripts/demo-suite.sh` is still a stub. It is not a rule change; from Task 5 on, acceptance needs real `demo-suite.sh` output at 4227 gametics.
+- Demo test data is laid out per game (decision-005): traces in `tests/demos/<game>/golden/<demo>.tics`, manifest at `tests/demos/<game>/manifest`.
 - Fixed run flags for generating and comparing traces: `-iwad wads/blasphem.wad -timedemo <demo> -nodraw -nosound -tichash <file>` with the dummy SDL drivers (decision-004). The engine exits 255 after -timedemo; that is normal, and the `timed N gametics` line decides the result.
 - `scripts/demo1-check.sh` remains the working DEMO1 check (wad sha256, 4227 gametics) and stays unchanged.
 - Approach is fixed by decision-001 (committed per-tic reference traces plus a bash runner).
@@ -19,7 +21,7 @@
 - Credentials are kept out of .memory/ by two hooks with the same patterns: the Claude Code PreToolUse hook `scripts/hooks/memory-secret-guard.py` (registered in `.claude/settings.json`, blocks Write/Edit/MultiEdit) and the versioned git hook `scripts/hooks/pre-commit` (install per clone, see its first line). Details and known gaps in docs/memory-architecture.md, Enforcement.
 
 ## Next action
-Task 4: add `tests/demos/heretic/manifest` with demo name (demo1), expected gametics (4227), trace sha256 and source commit (01044d09), all from decision-006. The manifest is covered by coding standard 4, so it needs explicit human approval before it is written; do not start it without that. The full ordered task list is in `docs/smoke-tests/demo-suite.md`.
+Task 5: replace the stub body of `scripts/demo-suite.sh` with the runner: wad check, manifest/trace sha256 check (reading `tests/demos/heretic/manifest`), headless run with the fixed run flags, tic count check, per-tic comparison by gametic reporting the first tic and field that differ, exit codes 0/1/2, and engine exit 255 not treated as FAIL (decision-006). It goes through the Orchestrator workflow (CLAUDE.md v0.1.5). The full ordered task list is in `docs/smoke-tests/demo-suite.md`.
 
 ## Deferred (do not reopen without a human decision)
 - Pinned C reference build (Approach 2): deferred in decision-001.
