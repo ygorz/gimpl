@@ -51,6 +51,14 @@ Last updated: 2026-11-07
  for this project. Human-maintained, read-only.
  Last reviewed 2026-11-05.
 
+- `../knowledge/handoff-orchestrator-to-subagent.md` — Blank
+ brief the Orchestrator fills in to invoke a subagent (AE 3.1).
+ Human-maintained, read-only. Added 2026-11-14.
+
+- `../knowledge/handoff-subagent-to-orchestrator.md` — Blank
+ result form a subagent fills in to report back (AE 3.1).
+ Human-maintained, read-only. Added 2026-11-14.
+
 ## Archived entries
 
 (none yet)

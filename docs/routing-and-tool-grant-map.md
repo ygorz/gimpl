@@ -8,7 +8,7 @@ Course MCP server: `coursetools` (`mcp/coursetools_server.py`, registered in `.m
 
 | Role | Granted | Withheld, and the risk |
 |---|---|---|
-| orchestrator (main session) | Agent (invoke subagents), `mcp__coursetools__file_read`, `mcp__coursetools__file_write` for orchestration documents only | Code edits, `Bash` for builds or tests, `task_tracker`, `web_search`. An orchestrator that does the work itself skips every check below it. |
+| orchestrator (main session) | Agent (invoke subagents), `mcp__coursetools__file_read`, `mcp__coursetools__file_write` for run summaries under `docs/runs/` only, `Bash` for read-only git only (`git status`, `git diff`, `git log`) so it can gate the implementer and hand the diff to the fence-reviewer | Code edits (`Write`, `Edit`), `Bash` for builds, tests or file changes, `codebase_search`, `task_tracker`, `web_search`. An orchestrator that does the work itself skips every check below it. These limits are held by instruction in `CLAUDE.md`, since Claude Code doesn't restrict the main session's tools from a definition file. |
 | planner | `mcp__coursetools__file_read`, `mcp__coursetools__codebase_search` | `file_write`, `Write`, `Edit`, `Bash`, `shell`. A planner that edits has already started implementing without a reviewed plan. |
 | implementer | `mcp__coursetools__file_read`, `mcp__coursetools__file_write`, `mcp__coursetools__codebase_search` | `task_tracker` (it would mark its own work done). `test_runner` and `Bash` (it would grade its own work). Native `Write`/`Edit`, so every write goes through one tool. Never writes under `tests/demos/heretic/golden/` (an agent re-baselining DEMO1 would make a real desync "pass"). |
 | tester | `Bash` (build, `scripts/demo-suite.sh`, `scripts/demo1-check.sh`, `git status`), `mcp__coursetools__file_read` | `file_write`, `Write`, `Edit` (a tester that can edit could "fix" a failing trace). `mcp__coursetools__test_runner` is withheld on purpose: it is a dummy that always returns PASS, and a fake PASS must never count as evidence. |
@@ -21,7 +21,7 @@ No role holds `mcp__coursetools__task_tracker`, `mcp__coursetools__shell` or `mc
 - `file_read` is on all five roles. It's flagged, then accepted: it's a read-only primitive every role needs, and it can't change anything.
 - `codebase_search` is on three roles (planner, implementer, fence-reviewer). It's flagged, then accepted for the same reason.
 - `file_write` is on two roles: the implementer for code, and the orchestrator for orchestration documents only. No flag.
-- `Bash` is on one role (tester). It's the broadest grant, so the tester's instructions limit it to building, running the two scripts and inspecting output, and `git status` must show no changes from it. A planned hardening step is a PreToolUse hook that blocks writes under `tests/demos/heretic/golden/` for every agent.
+- `Bash` is on two roles: the tester, and the orchestrator for read-only git only. It's the broadest grant, so the tester's instructions limit it to building, running the two scripts and inspecting output, and `git status` must show no changes from it. A planned hardening step is a PreToolUse hook that blocks writes under `tests/demos/heretic/golden/` for every agent.
 
 ## Enforcement layers
 
