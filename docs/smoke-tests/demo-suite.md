@@ -1,8 +1,8 @@
-# Per-tic demo suite (`scripts/demo-suite.sh`) - Feature 1 stub
+# Per-tic demo suite (`scripts/demo-suite.sh`)
 
-Status: **stub**. The script prints usage and planned steps and exits 0. It
-does not run any demo. `scripts/demo1-check.sh` stays the DEMO1 check until
-the suite works, and is kept alongside it afterwards.
+Status: **runner implemented**. `scripts/demo-suite.sh` is manifest-driven and
+runs DEMO1 (every demo listed in `tests/demos/heretic/manifest`). Exit codes:
+0 PASS, 1 FAIL, 2 setup error. `scripts/demo1-check.sh` is kept alongside it.
 
 ## Decisions
 
@@ -41,11 +41,11 @@ the suite works, and is kept alongside it afterwards.
    the full 40-character source commit SHA. The trace path is
    `tests/demos/heretic/golden/<demo>.tics` by convention. The demo1 values
    are in `.memory/project/decisions/decision-006.md`.
-5. **Runner.** Replace the stub body of `scripts/demo-suite.sh` with the
-   planned steps: wad check, manifest/trace sha256 check, headless run with
-   the fixed run flags (below), tic count check, per-tic comparison by
-   `gametic` reporting the first tic and field that differ, and exit codes
-   0/1/2.
+5. **Runner.** Done (2026-11-14): `scripts/demo-suite.sh`, driven by the
+   manifest. For each demo it checks the wad and the trace sha256, runs the
+   demo headless with the fixed run flags (below), checks the tic count, and
+   compares the per-tic trace by `gametic`, reporting the first tic and field
+   that differ. Exit codes: 0 PASS, 1 FAIL, 2 setup error.
 6. **Hook-off check.** Done (2026-11-06): `scripts/demo1-check.sh` passes
    (4227 gametics, script exit 0) with the hook built in and the flag not
    set.
