@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "coursetools": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "/workspace/mcp/coursetools_server.py"
+      ],
+      "env": {
+        "COURSETOOLS_ROOT": "/workspace",
+        "COURSETOOLS_ALLOWLIST": "/workspace/mcp/roles.allowlist.json"
+      }
+    }
+  }
+}
