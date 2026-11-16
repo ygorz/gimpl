@@ -1,0 +1,10 @@
+# MCP servers (Module 3): coursetools, storage, retrieval.
+# Top-level packages pinned to exact versions (tested together 2026-11-16).
+# On linux/arm64, PyPI's torch wheel is CPU-only.
+mcp==1.30.0
+fastmcp==3.4.11
+uvicorn==0.54.0
+starlette==1.10.0
+sqlite-vec==0.1.9
+torch==2.15.0
+sentence-transformers==6.3.0

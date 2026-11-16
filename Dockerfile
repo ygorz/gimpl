@@ -30,8 +30,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsdl2-net-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# MCP servers (Module 3): coursetools needs the mcp package; fastmcp is for 3.2
-RUN pip install --no-cache-dir "mcp<2" fastmcp
+# MCP servers (Module 3): coursetools, storage and retrieval.
+# Exact pins live in requirements-mcp.txt so a new release can't break the build.
+COPY requirements-mcp.txt /tmp/requirements-mcp.txt
+RUN pip install --no-cache-dir -r /tmp/requirements-mcp.txt
+
+# Bake the embedding model into the image. Builds and checks run with no
+# egress, so the retrieval server can't download it at startup.
+ENV HF_HOME=/opt/hf-cache
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+ENV HF_HUB_OFFLINE=1
 
 # Install Claude Code
 RUN npm install -g @anthropic-ai/claude-code
