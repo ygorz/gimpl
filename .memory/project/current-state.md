@@ -2,9 +2,10 @@
 
 **Scope:** Workflow (archive when feature/per-tic-demo-suite merges to master)
 **Branch:** feature/per-tic-demo-suite
-**Last updated:** 2026-11-14 (commit status of anything below: check git, which wins over this file; CLAUDE.md v0.1.6)
+**Last updated:** 2026-11-16 (commit status of anything below: check git, which wins over this file; CLAUDE.md v0.1.7)
 
 ## Where things stand
+- Task 7 is done (2026-11-16), committed in 1fcf3926: failure-path runs of `scripts/demo-suite.sh` are recorded in `docs/smoke-tests/demo-suite-failure-paths.md`. Real PASS in the repo (4227 gametics, exit 0); edited trace in a temp copy with the temp manifest sha256 updated (exit 1, `gametic 100: p0.armor expected 50 got 0`); bad sha256 in a temp manifest (exit 2, setup error by design, no `timed` line); optional O1-O5 as expected. Forced failures ran from a copy of the runner in a `mktemp -d` tree outside the repo (the runner resolves ROOT from its own location, so no script change was needed); the real golden trace and manifest sha256 were unchanged. Note: an edited trace exits 2 unless the temp manifest's sha256 is updated too. Run record: `docs/runs/feature1-task7-run-1.md` (Tester PASS twice, Fence-reviewer APPROVE). Two one-offs George approved for Task 7 only, not standing rules: Tester ran before and after the Implementer, and the Tester could delete its own mktemp dirs. In that run every retrieve result came back as a keyword match with a null score; none matched by vector.
 - Task 5 is done (2026-11-14): `scripts/demo-suite.sh` is the real runner, not a stub. It reads `tests/demos/heretic/manifest` (loops over every line; no trace sha256, tic count or commit hardcoded), checks the wad sha256 (same pin as `demo1-check.sh`) and each trace's sha256 against the manifest, runs each demo headless with the fixed run flags into a temp dir outside the repo, checks the tic count, and compares per tic by gametic, reporting only the first difference as `gametic N: pX.field expected A got B`. Exit codes: 0 PASS, 1 FAIL (tic count, trace mismatch, missing/extra/duplicate gametic; the per-tic comparison still runs after a tic count mismatch), 2 setup error (wad/trace sha256, missing binary/manifest/trace, header mismatch, bad demo name, engine exit other than 0/255, or no `timed N gametics` line, e.g. a missing-mobj `I_Error`). No env path overrides (George, 2026-11-14). It also rejects demo names not matching `^[A-Za-z0-9_]+$`, an unplanned addition George accepted because the name becomes a file path. Run record: `docs/runs/feature1-task5-run-1.md` (Tester PASS from real demo-suite.sh output at 4227 gametics, Fence-reviewer APPROVE). Git is the source of truth for whether this change is committed.
 - Trace format v1 is pinned in `docs/smoke-tests/demo-suite.md` ("Trace format (v1)"): positional, space-separated, hex for `fixed_t`/`angle_t`, decimal for the rest, `#tichash v1` header, per-player `pN` blocks, no line on non-level tics, runner compares by gametic. Recorded in decision-003.
 - The `-tichash` C hook is in (task 1, commit 066ea6ac): `G_TicHashWrite()` in `src/heretic/g_game.c` plus a `prndindex` extern in `src/heretic/m_random.h`. A missing player mobj stops the run with `I_Error` (decision-004).
@@ -21,12 +22,13 @@
 - Credentials are kept out of .memory/ by two hooks with the same patterns: the Claude Code PreToolUse hook `scripts/hooks/memory-secret-guard.py` (registered in `.claude/settings.json`, blocks Write/Edit/MultiEdit) and the versioned git hook `scripts/hooks/pre-commit` (install per clone, see its first line). Details and known gaps in docs/memory-architecture.md, Enforcement.
 
 ## Next action
-Task 7: record a PASS run and forced FAIL runs (edited trace, bad sha256) of `scripts/demo-suite.sh`, as done for `demo1-check.sh`. Forced failures use temp copies outside the repo, never the real golden trace or manifest (George, 2026-11-14). It goes through the Orchestrator workflow (CLAUDE.md v0.1.6). The full ordered task list is in `docs/smoke-tests/demo-suite.md`.
+Task 8: update the `demo-verifier` agent to call `scripts/demo-suite.sh` (rubric and iteration log too). The full ordered task list is in `docs/smoke-tests/demo-suite.md`. Task 8 changes `.claude/agents/demo-verifier.md` and docs rather than `scripts/`, `src/` or `tests/`, so whether it goes through the Orchestrator workflow needs George's call (see Open questions).
 
 ## Deferred (do not reopen without a human decision)
 - Pinned C reference build (Approach 2): deferred in decision-001.
 - DEMO2 and DEMO3: out until DEMO1 works end to end.
 
 ## Open questions
+- Task 8 routing: CLAUDE.md sends Feature 1 tasks from `docs/smoke-tests/demo-suite.md` through the team, but Task 8 edits an agent definition, not `scripts/`, `src/` or `tests/`. Open: run it through the Orchestrator workflow, or as a direct change. Needs George's decision.
 - DEMO3 is still deferred (2582 gametics, not yet pinned). Open: when to pin it once DEMO1 works end to end.
 - Rebuild before trace: decision-006's trace was made from a clean rebuild at a recorded commit, because the earlier binary could not be tied to a commit. Open: whether to make "clean rebuild at a recorded commit before generating any reference trace" a standing rule (for example an amendment to decision-004, or a check in the runner). It is not a rule yet; needs a human decision.
