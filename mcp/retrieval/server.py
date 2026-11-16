@@ -4,6 +4,7 @@ import argparse
 import os
 import re
 import sqlite3
+import sys
 from pathlib import Path
 from typing import Callable
 
@@ -23,6 +24,12 @@ PROJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9-]+$")
 # Ordered from least to most sensitive. A value's index is its sensitivity rank.
 CLASSIFICATION_ORDER = ["public", "internal", "confidential", "secret"]
 FALLBACK_CLASSIFICATION = "secret"
+# GIMPL change: server-side ceiling clamp. A caller may ask for any ceiling,
+# but results never go above RETRIEVAL_MAX_CEILING. The agent can't raise this,
+# because it is set in the container env, not in the tool call.
+MAX_CEILING = os.getenv("RETRIEVAL_MAX_CEILING", "internal")
+if MAX_CEILING not in CLASSIFICATION_ORDER:
+    raise SystemExit(f"RETRIEVAL_MAX_CEILING must be one of {CLASSIFICATION_ORDER}")
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
 mcp = FastMCP("retrieval")
@@ -281,7 +288,14 @@ def retrieve(
 
     filters = metadata_filters or {}
     validate_metadata_filters(filters)
-    ceiling_rank = rank(classification_ceiling)
+    ceiling_rank = min(rank(classification_ceiling), rank(MAX_CEILING))
+    if rank(classification_ceiling) > ceiling_rank:
+        print(
+            f"CLAMP: requested ceiling '{classification_ceiling}' lowered to "
+            f"'{MAX_CEILING}' (RETRIEVAL_MAX_CEILING)",
+            file=sys.stderr,
+            flush=True,
+        )
     pool_size = max(top_k * 5, 20)
     query_vector = sqlite_vec.serialize_float32(embed(query))
 
