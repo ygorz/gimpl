@@ -1,4 +1,17 @@
 {
+  "permissions": {
+    "deny": [
+      "Read(./.memory/reference/lessons/**)",
+      "Edit(./.memory/reference/lessons/**)",
+      "Read(./.memory/storage.db*)",
+      "Edit(./.memory/storage.db*)",
+      "Read(./.memory/storage-audit.log)",
+      "Edit(./.memory/storage-audit.log)",
+      "Read(//memory/**)",
+      "Edit(//memory/**)",
+      "Bash(sqlite3 *)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

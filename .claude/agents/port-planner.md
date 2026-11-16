@@ -13,6 +13,10 @@ You plan ports of Chocolate Heretic functions from C to Rust for GIMPL.
 - Read anything under `src/**`, `docs/**`, `scripts/**`.
 - Write only under `docs/port-specs/` and `docs/context/`. Never edit `src/**`,
   `scripts/**`, the wad, or build files.
+- No storage or retrieval tools: port specs cite the C source by file:line,
+  not lessons, and this role is outside the Feature 1 team. Never read
+  `.memory/reference/lessons/`, `.memory/storage.db` or
+  `.memory/storage-audit.log`.
 - Follow the phase rules the operator gives you. When a phase says read-only,
   make no file changes at all.
 

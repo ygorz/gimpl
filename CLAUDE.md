@@ -3,7 +3,7 @@
 GIMPL: Chocolate Heretic (C) being ported function by function to Rust,
 verified against built-in demos with blasphem.wad.
 
-Version: v0.1.6
+Version: v0.1.7
 
 # Agent Instructions
 
@@ -43,6 +43,12 @@ duplicates.
  context, and open only the listed documents you need. Never write
  to this directory or modify its permissions without explicit human
  instruction. If a permission error occurs there, stop and ask.
+ Exception: .memory/reference/lessons/ is the proj-lessons corpus.
+ Never open it directly; query it with mcp__retrieval__retrieve
+ (planner and fence-reviewer only). Run lessons are written with
+ mcp__storage__write_entry (implementer only). Never read
+ .memory/storage.db or .memory/storage-audit.log. These direct reads
+ are denied in .claude/settings.json.
 
 ### Write policy
 
@@ -179,8 +185,8 @@ output format to the headings in that role's definition.
    evidence.
 3. tester receives: the implementer's `## Files changed` and the plan's
    done criteria.
-4. fence-reviewer receives: the approved plan, the full `git diff` and the
-   Tester's result.
+4. fence-reviewer receives: the approved plan, the full `git diff`, the
+   Tester's result, and any substitute check George approved for this task.
 
 ## Evaluation gate
 
@@ -188,15 +194,18 @@ After each subagent returns, check its result against that phase's
 criteria BEFORE invoking the next role, and pass forward only a result that
 meets them:
 - planner: every step names its files, the done criteria are checkable from
-  command output, there is no golden path in `## Files`, and
-  `## Open questions` is answered or None.
+  command output, there is no golden path in `## Files`,
+  `## Open questions` is answered or None, and `## Citations` lists what
+  `retrieve` returned (or "None returned").
 - implementer: only files in the plan changed (check with `git status` and
-  `git diff`), and `## Not done` is None.
+  `git diff`), `## Not done` is None, and `## Lesson stored` gives an
+  `entry_id` (or says why none was stored).
 - tester: `## Verdict` is PASS, `## Evidence` shows real `demo-suite.sh`
   output with 4227 gametics (or the substitute check George approved for
   this task), and its `## git status` shows no changes from
   the Tester.
-- fence-reviewer: `## Verdict` is APPROVE.
+- fence-reviewer: `## Verdict` is APPROVE and `## Lessons checked` lists
+  what `retrieve` returned (or "None returned").
 
 ## Branching logic
 
@@ -236,9 +245,15 @@ meets them:
 The Agent tool to invoke subagents; `mcp__coursetools__file_read`;
 `mcp__coursetools__file_write` only for run summaries under `docs/runs/`;
 `Bash` only for read-only git (`git status`, `git diff`, `git log`).
-Never use Bash to build, run the demo checks or change files. These limits
-are held by instruction: Claude Code does not restrict the main session's
-tools from a definition file.
+Never use Bash to build, run the demo checks or change files. No storage
+or retrieval tools: the Orchestrator routes and gates, it doesn't do
+content. Lessons go in through the implementer's `write_entry` and come out
+through the planner's and fence-reviewer's `retrieve`. Never read
+`.memory/reference/lessons/`, `.memory/storage.db` or
+`.memory/storage-audit.log` directly; George reads the audit log himself.
+These limits are held by instruction: Claude Code does not restrict the
+main session's tools from a definition file. The direct reads are also
+denied in `.claude/settings.json`.
 
 ## Output
 

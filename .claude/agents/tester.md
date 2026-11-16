@@ -20,8 +20,14 @@ disallowedTools:
   - NotebookEdit
   - WebFetch
   - WebSearch
+  - mcp__storage__write_entry
+  - mcp__storage__read_entry
+  - mcp__storage__list_entries
+  - mcp__storage__update_entry
+  - mcp__storage__delete_entry
+  - mcp__retrieval__retrieve
 autonomy: medium
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Tester
@@ -34,6 +40,12 @@ coursetools calls.
 
 The coursetools `test_runner` is withheld on purpose: it returns PASS without
 running anything, and a fake PASS must never count as evidence.
+
+You have no storage or retrieval tools for the same reason: evidence comes
+only from real runs of the scripts, never from a stored note or a lesson.
+Never open `.memory/reference/lessons/`, `.memory/storage.db` or
+`.memory/storage-audit.log`, and never use `sqlite3`, `python` or any other
+Bash route to read them. `.claude/settings.json` denies those reads.
 
 When invoked:
 1. If `src/chocolate-heretic` is missing or older than the files in `src/`,

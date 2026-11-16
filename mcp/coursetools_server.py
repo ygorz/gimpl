@@ -52,10 +52,29 @@ def authorize(tool_name: str, role: str) -> None:
         )
 
 
+# Lessons and storage are reached only through the retrieval and storage
+# MCP servers. No coursetools call may read, write or search them directly.
+DENIED_PATHS = (
+    ROOT / ".memory" / "reference" / "lessons",
+    ROOT / ".memory" / "storage.db",
+    ROOT / ".memory" / "storage.db-wal",
+    ROOT / ".memory" / "storage.db-shm",
+    ROOT / ".memory" / "storage-audit.log",
+)
+
+
+def is_denied(candidate: Path) -> bool:
+    return any(candidate == d or d in candidate.parents for d in DENIED_PATHS)
+
+
 def safe_path(path: str) -> Path:
     candidate = (ROOT / path).resolve()
     if not str(candidate).startswith(str(ROOT)):
         raise ValueError(f"Path escapes the project root: {path}")
+    if is_denied(candidate):
+        raise PermissionError(
+            f"Denied: {path} is reached only through the storage or retrieval server."
+        )
     return candidate
 
 
@@ -92,7 +111,7 @@ def codebase_search(role: str, query: str, root: str = ".", max_results: int = 2
             break
         if any(part in ignored_dirs for part in path.parts):
             continue
-        if not path.is_file():
+        if not path.is_file() or is_denied(path.resolve()):
             continue
         try:
             text = path.read_text(encoding="utf-8")
