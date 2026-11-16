@@ -67,3 +67,9 @@ GTAGS
 # clangd settings
 /.cache/clangd
 compile_commands.json
+
+# MCP storage server runtime files (Module 3). Local to each container run;
+# the rest of .memory/ stays committed.
+/.memory/storage.db
+/.memory/storage.db-*
+/.memory/storage-audit.log
