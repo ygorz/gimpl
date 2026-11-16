@@ -1,0 +1,8 @@
+Q1: PASS [lesson-container-clock-utc.md#1(vector,0.694), lesson-container-clock-utc.md#2(vector,0.678)]
+Q2: PASS [lesson-exit-255-normal.md#0(vector,0.758)]
+Q3: PASS [lesson-missing-mobj-ierror.md#1(vector,0.661), lesson-missing-mobj-ierror.md#2(vector,0.66)]
+Q4: FAIL [lesson-golden-trace-layout.md#2(keyword,None), lesson-golden-trace-layout.md#0(keyword,None), lesson-golden-trace-layout.md#1(keyword,None)]
+Q5: PASS [lesson-container-clock-utc.md#1(keyword,None), lesson-manifest-format.md#2(keyword,None), lesson-container-clock-utc.md#2(keyword,None)]
+Q6: PASS [lesson-evidence-gap-substitute-check.md#2(vector,0.73)]
+
+5/6 passed
