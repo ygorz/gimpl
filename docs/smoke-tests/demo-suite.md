@@ -49,8 +49,9 @@ runs DEMO1 (every demo listed in `tests/demos/heretic/manifest`). Exit codes:
 6. **Hook-off check.** Done (2026-11-06): `scripts/demo1-check.sh` passes
    (4227 gametics, script exit 0) with the hook built in and the flag not
    set.
-7. **Failure-path runs.** Record a PASS run and forced FAIL runs (edited trace,
-   bad sha256), as done for `demo1-check.sh`.
+7. **Failure-path runs.** Done (2026-11-16): PASS 4227 exit 0; edited trace
+   exit 1; bad sha256 exit 2; optional O1-O5 as expected. See
+   `docs/smoke-tests/demo-suite-failure-paths.md`.
 8. **Agent.** Update `demo-verifier` to call the suite (rubric and iteration
    log too).
 9. **Later.** DEMO3 (2582, not yet pinned) and DEMO2 stay out until DEMO1
