@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from test_deterministic import (FAIL, block_text, changed_paths, collect_results,  # noqa: E402
-                                load_run, run_all_checks)
+                                final_text, load_run, run_all_checks)
 
 RUBRIC_PATH = os.environ.get("GIMPL_RUBRIC", "eval/rubric.json")
 JUDGE_CWD = "/tmp/gimpl-judge"     # outside the repo: no CLAUDE.md, hooks or .mcp.json
@@ -88,8 +88,91 @@ def parse_score(reply):
     raise ValueError("unterminated JSON object in judge reply")
 
 
+READ_TOOLS = {"Read", "mcp__coursetools__file_read"}
+WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "mcp__coursetools__file_write"}
+
+
+def clip(text, limit, keep="head"):
+    """Shorten text for the judge and SAY so: an explicit marker keeps an
+    omission from reading as missing work (3.3 grader feedback)."""
+    text = text or ""
+    if len(text) <= limit:
+        return text
+    cut = len(text) - limit
+    if keep == "tail":
+        return f"[truncated {cut} chars] " + text[-limit:]
+    return text[:limit] + f" [truncated {cut} chars]"
+
+
+def call_lines(who, c):
+    """Judge-view lines for one tool call: commands and their output, file
+    reads and what came back, written content, retrieve and write_entry."""
+    i, tool = c["input"], c["tool"]
+    if tool == "Bash":
+        return [f"[{who} ran] {clip(i.get('command', ''), 300)}\n"
+                f"[output] {clip(block_text(c['result']), 1500, keep='tail')}"]
+    if tool in READ_TOOLS:
+        path = i.get("file_path") or i.get("path") or ""
+        return [f"[{who} read] {path}\n[file content] {clip(block_text(c['result']), 1500)}"]
+    if tool in WRITE_TOOLS:
+        path = i.get("file_path") or i.get("path") or ""
+        if tool == "Edit":
+            body = f"[old] {clip(i.get('old_string', ''), 600)}\n[new] {clip(i.get('new_string', ''), 1500)}"
+        elif tool == "MultiEdit":
+            body = "\n".join(f"[new] {clip(e.get('new_string', ''), 600)}" for e in i.get("edits") or []
+                             if isinstance(e, dict))
+        else:
+            body = f"[content written] {clip(i.get('content', ''), 3000)}"
+        return [f"[{who} wrote] {path}{' (ERROR: not written)' if c['is_error'] else ''}\n{body}"]
+    if tool == "mcp__retrieval__retrieve":
+        return [f"[{who} retrieve] {clip(json.dumps(i), 400)}\n"
+                f"[results] {clip(block_text(c['result']), 2000)}"]
+    if tool == "mcp__storage__write_entry":
+        return [f"[{who} write_entry] {clip(json.dumps(i), 1500)}"]
+    return []
+
+
+def fair_shares(sizes, room):
+    """Split `room` characters across sections: small sections keep their
+    full size, the rest share what is left equally (water-filling)."""
+    shares, left, todo = [0] * len(sizes), room, sorted(range(len(sizes)), key=lambda k: sizes[k])
+    while todo:
+        each = left // len(todo)
+        k = todo[0]
+        if sizes[k] <= each:
+            shares[k] = sizes[k]
+            left -= sizes[k]
+            todo.pop(0)
+        else:
+            for k in todo:
+                shares[k] = each
+            break
+    return shares
+
+
+def fit_section(head, calls, report, share):
+    """One section in at most `share` chars: tool-call evidence is cut first
+    (with a marker), then the report; the header always stays."""
+    body = "\n".join(calls)
+    full = "\n".join(x for x in (head, body, report) if x)
+    if len(full) <= share:
+        return full
+    over = len(full) - share
+    if body and over <= len(body):
+        body = clip(body, max(len(body) - over - 40, 0))
+    else:
+        body = f"[tool-call evidence truncated {len(body)} chars]" if body else ""
+        report = clip(report, max(share - len(head) - len(body) - 40, 0))
+    return "\n".join(x for x in (head, body, report) if x)
+
+
 def judge_view(run):
-    """A short, readable view of the run for the judge, not the raw JSONL."""
+    """A short, readable view of the run for the judge, not the raw JSONL.
+    Harness v3 (3.3 grader feedback): adds the orchestrator's own reads and
+    its final answer (the whole answer on a no-subagent path such as HO-06),
+    every role's file reads and written content, and marks every cut. When
+    the run is longer than VIEW_CAP, every step keeps a fair share (tool-call
+    evidence is cut before reports), so late steps are never dropped."""
     m = run["meta"]
     parts = [f"TASK {m['task_id']} ({m['kind']} run {m['run_id']})",
              f"EXPECTED PATH: {' -> '.join(m['expected_path']) or 'main session only'}"]
@@ -98,25 +181,32 @@ def judge_view(run):
     first_user = next((block_text(r["message"]["content"]) for r in run["session"]
                        if r.get("type") == "user" and isinstance((r.get("message") or {}).get("content"), str)), "")
     if first_user:
-        parts.append("OPERATOR'S FIRST MESSAGE:\n" + first_user[:3000])
+        parts.append("OPERATOR'S FIRST MESSAGE:\n" + clip(first_user, 3000))
+    sections = []   # (header, call lines, report)
+    main = [line for c in run["main_calls"] for line in call_lines("orchestrator", c)]
+    if main:
+        sections.append(("--- ORCHESTRATOR (main session) TOOL CALLS ---", main, ""))
     for n, inv in enumerate(run["invocations"], 1):
-        parts.append(f"--- STEP {n}: {inv['role']} ---\nHANDOFF (orchestrator -> {inv['role']}):\n"
-                     f"{inv['prompt'][:4000]}")
-        for c in inv["calls"]:
-            if c["tool"] == "Bash":
-                parts.append(f"[{inv['role']} ran] {c['input'].get('command', '')[:300]}\n"
-                             f"[output] {block_text(c['result'])[-1500:]}")
-            elif c["tool"] == "mcp__retrieval__retrieve":
-                parts.append(f"[{inv['role']} retrieve] {json.dumps(c['input'])[:400]}\n"
-                             f"[results] {block_text(c['result'])[:2000]}")
-            elif c["tool"] == "mcp__storage__write_entry":
-                parts.append(f"[{inv['role']} write_entry] {json.dumps(c['input'])[:1500]}")
-        parts.append(f"REPORT ({inv['role']}):\n{inv['output'][:6000]}")
+        sections.append((f"--- STEP {n}: {inv['role']} ---\nHANDOFF (orchestrator -> {inv['role']}):\n"
+                         f"{clip(inv['prompt'], 4000)}",
+                         [line for c in inv["calls"] for line in call_lines(inv["role"], c)],
+                         f"REPORT ({inv['role']}):\n{clip(inv['output'], 6000)}"))
+    # The outcome goes last and is never squeezed out by a long run.
+    tail = []
     for path, text in run["summaries"].items():
-        parts.append(f"--- RUN SUMMARY {os.path.basename(path)} ---\n{text[:8000]}")
-    parts.append("FILES CHANGED IN THE RUN: " + (", ".join(changed_paths(run)) or "none"))
-    view = "\n\n".join(parts)
-    if len(view) > VIEW_CAP:
+        tail.append(f"--- RUN SUMMARY {os.path.basename(path)} ---\n{clip(text, 8000)}")
+    tail.append("--- ORCHESTRATOR FINAL ANSWER ---\n" + (clip(final_text(run["session"]), 6000) or "(none)"))
+    tail.append("FILES CHANGED IN THE RUN: " + (", ".join(changed_paths(run)) or "none"))
+    fixed = "\n\n".join(parts + tail)
+    texts = [fit_section(h, c, r, 10 ** 9) for h, c, r in sections]
+    room = VIEW_CAP - len(fixed) - 2 * (len(sections) + 1) - 200
+    if sum(len(t) for t in texts) > room:
+        shares = fair_shares([len(t) for t in texts], max(room, 0))
+        texts = [fit_section(h, c, r, sh) for (h, c, r), sh in zip(sections, shares)]
+        parts.append(f"[view truncated to fit the {VIEW_CAP}-char cap: each step below keeps a fair "
+                     "share; cut text is marked]")
+    view = "\n\n".join(parts + texts + tail)
+    if len(view) > VIEW_CAP:  # only if the fixed parts alone exceed the cap
         view = view[:VIEW_CAP] + f"\n[view cut at {VIEW_CAP} characters]"
     return view
 
@@ -128,7 +218,9 @@ def build_judge_prompt(dim, view):
         "evidence below. Pick the level from 1 to 4 whose description and example fit "
         "best. Return only a JSON object with the fields \"dimension\", \"score\" (an "
         "integer from 1 to 4) and \"justification\" (one or two sentences that quote a "
-        "short piece of the evidence). Return nothing else.\n\n"
+        "short piece of the evidence). Return nothing else. Evidence marked "
+        "\"[truncated N chars]\" or \"[view truncated ...]\" was shortened for length by the "
+        "harness; do not treat the omitted text as missing work.\n\n"
         f"DIMENSION: {dim['name']}\nWHAT IT MEASURES: {dim['description']}\n"
         f"LEVELS:\n{json.dumps(dim['levels'], indent=2)}\n"
         f"EXAMPLES:\n{json.dumps(dim.get('examples', {}), indent=2)}\n\n"
@@ -146,7 +238,10 @@ def score_dimension(dim, view):
             raise ValueError(f"score {score!r} is not an integer from 1 to 4")
         if obj.get("dimension") not in (None, dim["name"]):
             raise ValueError(f"reply is for dimension {obj.get('dimension')!r}")
-        just = str(obj.get("justification", "")).strip()
+        just = obj.get("justification")
+        if not isinstance(just, str) or not just.strip():
+            raise ValueError("empty or missing justification (a score must quote its evidence)")
+        just = just.strip()
         passed = score >= dim["pass_threshold"]
         return {"check": f"rubric:{dim['name']}", "failure_mode": "quality (rubric)",
                 "status": "PASS" if passed else FAIL, "passed": passed, "score": score,

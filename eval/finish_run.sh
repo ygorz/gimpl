@@ -3,6 +3,7 @@
 # audit-log slice, the "after" snapshot, new run summaries and metrics into
 # the run dir. Run inside the same container, after exiting Claude Code.
 #   eval/finish_run.sh .eval-artifacts/runs/<dev|holdout>/<RUN-ID>
+# The "after" snapshot also hashes every file the "before" snapshot hashed.
 # Optional env: CLAUDE_PROJECTS_DIR (default: ${CLAUDE_CONFIG_DIR:-~/.claude}/projects/-workspace)
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -32,7 +33,7 @@ else
 fi
 echo "audit: $(wc -l < "$DIR/audit.jsonl") new line(s)"
 
-python3 eval/snapshot.py "$DIR/git-after.json"
+python3 eval/snapshot.py "$DIR/git-after.json" "$DIR/git-before.json"
 [ -f /tmp/retrieval.log ] && cp /tmp/retrieval.log "$DIR/retrieval-tmp.log"
 
 DIR="$DIR" python3 - <<'EOF'
