@@ -1,0 +1,147 @@
+# Per-tic demo suite (`scripts/demo-suite.sh`)
+
+Status: **runner implemented**. `scripts/demo-suite.sh` is manifest-driven and
+runs DEMO1 (every demo listed in `tests/demos/heretic/manifest`). Exit codes:
+0 PASS, 1 FAIL, 2 setup error. `scripts/demo1-check.sh` is kept alongside it.
+
+## Decisions
+
+- Approach 1: per-tic reference traces committed to the repo, run by a bash script.
+- `src/` edits are allowed only for the opt-in `-tichash` hook.
+- DEMO1 only to start (pinned at 4227 gametics).
+- Fingerprint covers RNG (`rndindex`, `prndindex`) and player state only,
+  not the thinker list.
+- Reference traces are never regenerated or edited silently. A changed
+  trace needs human approval and a commit that says why (coding standard 4).
+- Approach 2 (a pinned C reference build run side by side) is deferred, not
+  rejected; see `.memory/project/decisions/decision-001.md`.
+- `scripts/demo1-check.sh` stays unchanged while the suite is built.
+
+## What Feature 1 still needs
+
+1. **C hook.** Done (2026-11-06): opt-in `-tichash <file>` flag.
+   `G_TicHashWrite()` is called right after `P_Ticker()` in `G_Ticker`
+   (`src/heretic/g_game.c:1358`) and writes one line per level tic in
+   "Trace format (v1)" below; `prndindex` is now declared in
+   `src/heretic/m_random.h`. A player in game with no mobj stops the run
+   with `I_Error` (decision-004). Test run: two runs with the fixed flags
+   gave byte-identical traces (header plus gametic 0-4226, still 4227
+   gametics). No reference trace was generated.
+2. **Trace format.** Done: pinned as v1 below (decision-003).
+3. **Reference trace.** Done (2026-11-07, approved under coding standard 4):
+   `tests/demos/heretic/golden/demo1.tics` generated with the fixed run flags
+   (below) from a clean build at source commit 01044d09. sha256
+   `537e8a1fd73967c0099d1ee55c0586e353d5240d27dd3a41dfa15ac3757d2f30`.
+   Two runs were byte-identical. Full provenance is in
+   `.memory/project/decisions/decision-006.md`.
+4. **Manifest.** Done (approved under coding standard 4):
+   `tests/demos/heretic/manifest` (one manifest per game, decision-005).
+   Format: `#` comment lines, then one line per demo:
+   `<demo> <gametics> <trace_sha256> <source_commit>`, space-separated, with
+   the full 40-character source commit SHA. The trace path is
+   `tests/demos/heretic/golden/<demo>.tics` by convention. The demo1 values
+   are in `.memory/project/decisions/decision-006.md`.
+5. **Runner.** Done (2026-11-14): `scripts/demo-suite.sh`, driven by the
+   manifest. For each demo it checks the wad and the trace sha256, runs the
+   demo headless with the fixed run flags (below), checks the tic count, and
+   compares the per-tic trace by `gametic`, reporting the first tic and field
+   that differ. Exit codes: 0 PASS, 1 FAIL, 2 setup error.
+6. **Hook-off check.** Done (2026-11-06): `scripts/demo1-check.sh` passes
+   (4227 gametics, script exit 0) with the hook built in and the flag not
+   set.
+7. **Failure-path runs.** Done (2026-11-16): PASS 4227 exit 0; edited trace
+   exit 1; bad sha256 exit 2; optional O1-O5 as expected. See
+   `docs/smoke-tests/demo-suite-failure-paths.md`.
+8. **Agent.** Done (2026-11-16): `demo-verifier` v0.2.0 runs `demo-suite.sh`
+   for the verdict and `demo1-check.sh` as a cross-check. Made as a direct
+   change, not through the team, because it edits an agent definition only
+   (George's call). Verification run in `docs/iteration-log.md`.
+9. **Later.** DEMO3 (2582, not yet pinned) and DEMO2 stay out until DEMO1
+   works end to end.
+
+## Trace format (v1)
+
+Pinned 2026-11-06 (`.memory/project/decisions/decision-003.md`). Changing it
+means bumping the version in the header and regenerating the reference
+traces, which needs human approval (coding standard 4).
+
+### File layout
+
+- ASCII text, `\n` line endings, one file per demo
+  (`tests/demos/<game>/golden/<demo>.tics`, e.g.
+  `tests/demos/heretic/golden/demo1.tics`; decision-005).
+- Line 1 is this header, exactly:
+
+  ```
+  #tichash v1 gametic rndindex prndindex {pN x y z angle momx momy health armor readyweapon artifactcount invslot}
+  ```
+
+  `{...}` marks the per-player group, repeated once per player in game.
+- After the header, one line per tic on which the hook runs: after
+  `P_Ticker()` in the `GS_LEVEL` case of `G_Ticker`. Non-level tics
+  (intermission, finale, demo screen) write no line, so `gametic` values can
+  skip. That is expected.
+- Fields are separated by one ASCII space. No leading or trailing space.
+
+### Line layout
+
+`gametic rndindex prndindex`, then for each player `i` with
+`playeringame[i]`, in ascending `i`: `p<i>` followed by the 11 player fields
+in the order below. Each player block starts with `pN`, so a missing player
+never shifts another player's columns.
+
+| Column        | Source                            | Encoding |
+|---------------|-----------------------------------|----------|
+| gametic       | `gametic`                         | decimal  |
+| rndindex      | `rndindex`                        | decimal  |
+| prndindex     | `prndindex`                       | decimal  |
+| pN            | player number `i`                 | `p` + decimal |
+| x             | `players[i].mo->x`                | hex      |
+| y             | `players[i].mo->y`                | hex      |
+| z             | `players[i].mo->z`                | hex      |
+| angle         | `players[i].mo->angle`            | hex      |
+| momx          | `players[i].mo->momx`             | hex      |
+| momy          | `players[i].mo->momy`             | hex      |
+| health        | `players[i].mo->health`           | decimal  |
+| armor         | `players[i].armorpoints`          | decimal  |
+| readyweapon   | `players[i].readyweapon`          | decimal  |
+| artifactcount | `players[i].artifactCount`        | decimal  |
+| invslot       | `players[i].inventorySlotNum`     | decimal  |
+
+- **hex:** the value cast to 32-bit unsigned, lowercase, zero-padded to 8
+  digits. C: `printf("%08x", (unsigned int) v)`. Rust: `format!("{:08x}", v as u32)`.
+  A negative `fixed_t` therefore appears in two's complement (`-64.0` is
+  `ffc00000`).
+- **decimal:** C `%d`, Rust `{}` on the value as `i32`. No padding, `-` for negatives.
+
+Illustrative line (made-up values, not from a real trace):
+
+```
+0 0 0 p0 ffc00000 01600000 00000000 40000000 00000000 00000000 100 0 1 0 0
+```
+
+### Fixed run flags
+
+Reference traces are generated, and comparison traces are produced, with
+exactly this invocation and nothing else (decision-004):
+
+```
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+  src/chocolate-heretic -iwad wads/blasphem.wad -timedemo <demo> \
+  -nodraw -nosound -tichash <file>
+```
+
+`rndindex` is shared with code outside the game simulation, so a trace made
+with other flags can differ without any real desync. Such a trace cannot be
+committed as a reference or compared against one. Changing these flags means
+regenerating every reference trace, which needs human approval (coding
+standard 4).
+
+### Comparison rules (runner)
+
+- The header must match the reference exactly. A mismatch is a setup error
+  (exit 2), not a FAIL.
+- Lines are matched by `gametic`, not by line number. A `gametic` present in
+  only one of the two traces is a FAIL (missing or extra tic).
+- On FAIL, report the first differing `gametic` and the field by its header
+  name, e.g. `gametic 1234: p0.momx expected 0001a000 got 0001a001`.

@@ -1099,6 +1099,104 @@ boolean G_Responder(event_t * ev)
     return (false);
 }
 
+// -tichash: opt-in per-tic trace, format v1 (docs/smoke-tests/demo-suite.md).
+// Writes only; never touches game state, so play is unchanged with or
+// without the flag.
+
+static FILE *tichash_file = NULL;
+
+static void G_TicHashClose(void)
+{
+    if (tichash_file != NULL)
+    {
+        fclose(tichash_file);
+        tichash_file = NULL;
+    }
+}
+
+static void G_TicHashOpen(void)
+{
+    int p;
+
+    //!
+    // @arg <file>
+    // @category demo
+    //
+    // Write a per-tic trace (gametic, RNG indices, player state) to
+    // <file>, for the GIMPL demo suite.
+    //
+
+    p = M_CheckParmWithArgs("-tichash", 1);
+    if (!p)
+    {
+        return;
+    }
+
+    // Binary mode so lines end in \n on every platform.
+    tichash_file = fopen(myargv[p + 1], "wb");
+    if (tichash_file == NULL)
+    {
+        I_Error("G_TicHashOpen: couldn't open %s", myargv[p + 1]);
+    }
+
+    fprintf(tichash_file,
+            "#tichash v1 gametic rndindex prndindex {pN x y z angle momx"
+            " momy health armor readyweapon artifactcount invslot}\n");
+
+    // Run on I_Error too: a timedemo ends via I_Error.
+    I_AtExit(G_TicHashClose, true);
+}
+
+static void G_TicHashWrite(void)
+{
+    static boolean checked = false;
+    int i;
+
+    if (!checked)
+    {
+        checked = true;
+        G_TicHashOpen();
+    }
+
+    if (tichash_file == NULL)
+    {
+        return;
+    }
+
+    fprintf(tichash_file, "%d %d %d", gametic, rndindex, prndindex);
+
+    for (i = 0; i < MAXPLAYERS; i++)
+    {
+        player_t *player;
+        mobj_t *mo;
+
+        if (!playeringame[i])
+        {
+            continue;
+        }
+
+        player = &players[i];
+        mo = player->mo;
+
+        if (mo == NULL)
+        {
+            I_Error("G_TicHashWrite: player %d has no mobj at gametic %d",
+                    i, gametic);
+        }
+
+        fprintf(tichash_file,
+                " p%d %08x %08x %08x %08x %08x %08x %d %d %d %d %d",
+                i,
+                (unsigned int) mo->x, (unsigned int) mo->y,
+                (unsigned int) mo->z, (unsigned int) mo->angle,
+                (unsigned int) mo->momx, (unsigned int) mo->momy,
+                mo->health, player->armorpoints, (int) player->readyweapon,
+                player->artifactCount, player->inventorySlotNum);
+    }
+
+    fputc('\n', tichash_file);
+}
+
 /*
 ===============================================================================
 =
@@ -1257,6 +1355,7 @@ void G_Ticker(void)
     {
         case GS_LEVEL:
             P_Ticker();
+            G_TicHashWrite();
             SB_Ticker();
             AM_Ticker();
             CT_Ticker();

@@ -29,6 +29,7 @@ void M_ClearRandom(void);
 // fix randoms for demos
 
 extern int rndindex;
+extern int prndindex;
 
 // Defined version of P_Random() - P_Random()
 int P_SubRandom (void);

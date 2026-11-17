@@ -1,0 +1,36 @@
+#!/bin/sh
+# Install: cp scripts/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# Blocks commits that put credential-like strings in .memory/.
+# Keep the patterns in sync with scripts/hooks/memory-secret-guard.py.
+found=0
+tmp=$(mktemp) || exit 1
+trap 'rm -f "$tmp"' EXIT
+
+check() {  # check <file> <label> <grep flags> <pattern>
+  if grep -q $3 -- "$4" "$tmp"; then
+    echo "BLOCKED: $1 matches pattern '$2'"
+    found=1
+  fi
+}
+
+git diff --cached --name-only -z --diff-filter=ACMR -- .memory/ |
+  tr '\0' '\n' > "$tmp.list"
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  git show ":$f" > "$tmp"
+  check "$f" "sk- key" -E 'sk-[A-Za-z0-9_-]{8,}'
+  check "$f" "keyword followed by : or = and a value" -iE \
+    '(^|[^A-Za-z0-9_])(api_key|apikey|token|secret|password|passwd)["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?[^[:space:]"'"'"']+'
+  check "$f" "credential value in an ALL-CAPS name" -E \
+    '(^|[^A-Za-z0-9_])[A-Z0-9_]*(API_KEY|TOKEN|SECRET|PASSWORD)(_[A-Z0-9]+)+([^A-Za-z0-9_]|$)'
+  check "$f" "AWS access key ID" -E 'AKIA[0-9A-Z]{16}'
+  check "$f" "GitHub token" -E 'gh[pousr]_[A-Za-z0-9]{20,}'
+  check "$f" "private key block" -E 'BEGIN [A-Z0-9 ]*PRIVATE KEY'
+done < "$tmp.list"
+rm -f "$tmp.list"
+
+if [ $found -ne 0 ]; then
+  echo "Commit blocked: remove credentials from .memory/ first; record only the env var name."
+  exit 1
+fi
+exit 0
