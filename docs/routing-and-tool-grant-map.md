@@ -67,7 +67,7 @@ All three Module 3.2 duties use project `proj-lessons`. The curated corpus is `.
 | fence-reviewer | None | `retrieve` | internal | Retrieves lessons about what the diff touches and checks the change against them, listing them under `## Lessons checked`. No storage: a judge that writes lessons could shape what later reviews are checked against. |
 | tester | None | None | n/a | Evidence must come only from real runs of `demo-suite.sh`, never from a stored note or a lesson. |
 | orchestrator (main session) | None | None | n/a | Routes and gates, it doesn't do content. Held by instruction, since Claude Code doesn't restrict the main session's tools. |
-| demo-verifier | None | None | n/a | The DEMO1 verdict comes only from `demo1-check.sh` output. Its `tools:` list has no MCP tools. |
+| demo-verifier | None | None | n/a | The verdict comes only from `demo-suite.sh` output, cross-checked by `demo1-check.sh`. Its `tools:` list has no MCP tools. |
 | port-planner | None | None | n/a | Port specs cite the C source by file:line, not lessons, and the role is outside the Feature 1 team. Its `tools:` list has no MCP tools. |
 
 The subagent grants are enforced by each definition's `tools:` list, with the withheld storage and retrieval tools also listed under `disallowedTools`. No role gets a confidential ceiling.
@@ -89,7 +89,7 @@ The subagent grants are enforced by each definition's `tools:` list, with the wi
 
 - **Giving the Tester coursetools `test_runner` instead of `Bash`.** Ruled out because it returns PASS without running anything, so a green result would be fake evidence.
 - **Folding the Fence-reviewer into the Tester.** Ruled out because the Tester needs `Bash` to run the demo. A scope judge with `Bash` could change files while judging them. Keeping the judge read-only keeps the verdict trustworthy.
-- **Reusing `demo-verifier` as the Tester.** Deferred. It still runs `demo1-check.sh` for the Module 2 work, and Feature 1 Task 8 updates it to call the suite once the runner works.
+- **Reusing `demo-verifier` as the Tester.** Deferred. Since Feature 1 Task 8 (2026-11-16) it runs `demo-suite.sh` with `demo1-check.sh` as a cross-check, but it stays a standalone check outside the Feature 1 team.
 - **Giving the Tester `retrieve` as the reviewing role.** Ruled out. The Tester's evidence must come only from real runs, and it holds `Bash`. The Fence-reviewer is read-only, so it's the safer role to check the work against lessons.
 - **Trusting the ceiling in each agent file.** Ruled out. The ceiling is a caller argument, so it's clamped server-side instead.
 - **A Project Manager role with `task_tracker`.** Ruled out for now. GIMPL has no ticket system, and George tracks status in `.memory/project/current-state.md` himself.

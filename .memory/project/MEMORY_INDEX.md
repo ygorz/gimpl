@@ -44,8 +44,8 @@ Last updated: 2026-11-16
  in f66cb067 on 2026-11-07; Task 4 manifest and Task 5 runner
  done 2026-11-14; Task 7 failure-path runs done 2026-11-16 in
  1fcf3926; git is the source of truth for commit status),
- next action (Task 8: demo-verifier calls the suite; routing
- open), deferred work and open questions. Workflow-scoped;
+ Task 8 done 2026-11-16 (demo-verifier calls the suite);
+ next action: merge to master, deferred work and open questions. Workflow-scoped;
  archive when feature/per-tic-demo-suite merges. Updated
  2026-11-16.
 

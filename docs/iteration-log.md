@@ -571,3 +571,10 @@ e9a67294 memory: git status is not memory (CLAUDE.md v0.1.4)
 
 - The planner, implementer, tester and fence-reviewer were each invoked in both Run 1 and Run 2. The implementer was also the agent under test in Run 0. The orchestrator is the main session, under CLAUDE.md v0.1.5 for Run 1 and v0.1.6 for Run 2.
 - Commits: a6b6264f (Run 1 work), b59f63f8 (Run 1 log and the v0.1.6 change), e85047f0 (Run 2 work and log). The Run 0 entry is in d6e4914d.
+
+## Feature 1 Task 8: demo-verifier calls the suite (2026-11-16)
+
+- **Change:** `.claude/agents/demo-verifier.md` 0.1.2 to 0.2.0. The verdict now comes from `scripts/demo-suite.sh`: every manifest demo needs `PASS: <demo> <N> gametics, trace matches`, then `PASS: <count> demo(s)` and suite exit 0. `scripts/demo1-check.sh` stays as a cross-check, and the two disagreeing is a FAIL. Suite exit 2 is reported as BLOCKED (setup error), not FAIL. `tests/` and the golden traces were added to its scope rule. This was a direct change, not a team run, because it edits an agent definition only (my call).
+- **Verification run:** fresh `claude --agent demo-verifier` session, prompt "Check the demos." It didn't rebuild (no `src/` file newer than the binary). Suite: `IWAD OK`, `trace OK` (537e8a1f…2f30), `timed 4227 gametics`, `engine exit code: 255`, `PASS: demo1 4227 gametics, trace matches`, `PASS: 1 demo(s)`, suite exit 0. Cross-check: `PASS: 4227 gametics == expected 4227`, exit 0. Verdict PASS, exit 255 explained as normal (decision-006). `git status --short` showed only this patch's three files plus the untracked `lesson-4-lab-submission.patch`. Nothing in `src/`, `scripts/`, `wads/` or `tests/` changed.
+- **Note:** it reported that `.claude/settings.local.json` no longer shows as untracked because the container's global git ignore covers it, and it didn't touch the file. That's expected.
+- **Rubric:** `docs/rubric.md` scores the `demo1-check.sh` failure-path task, not the verifier, so it is unchanged.
