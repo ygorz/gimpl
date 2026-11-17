@@ -11,6 +11,9 @@ model: inherit
 tools:
   - Agent                          # invoke subagents
   - mcp__coursetools__file_read    # read plans, results, memory
+  - Read                           # startup memory reads only
+  - Glob                           # startup memory reads only
+  - Grep                           # startup memory reads only
   - mcp__coursetools__file_write   # run summaries under docs/runs/ only
   - Bash                           # read-only git: status, diff, log
 disallowedTools:
@@ -31,7 +34,7 @@ disallowedTools:
   - mcp__storage__delete_entry
   - mcp__retrieval__retrieve
 autonomy: medium
-version: 1.1.1
+version: 1.2.0
 ---
 
 # Orchestrator
@@ -146,6 +149,7 @@ meets them:
 ### Tools the Orchestrator uses
 
 The Agent tool to invoke subagents; `mcp__coursetools__file_read`;
+`Read`, `Glob` and `Grep` only for the startup memory reads;
 `mcp__coursetools__file_write` only for run summaries under `docs/runs/`;
 `Bash` only for read-only git (`git status`, `git diff`, `git log`).
 Never use Bash to build, run the demo checks or change files. No storage

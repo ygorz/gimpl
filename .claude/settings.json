@@ -9,7 +9,10 @@
       "Edit(./.memory/storage-audit.log)",
       "Read(//memory/**)",
       "Edit(//memory/**)",
-      "Bash(sqlite3 *)"
+      "Bash(sqlite3 *)",
+      "Read(./.eval-artifacts/**)",
+      "Edit(./.eval-artifacts/**)",
+      "Read(./docs/holdout-task-set.md)"
     ]
   },
   "hooks": {

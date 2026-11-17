@@ -73,3 +73,6 @@ compile_commands.json
 /.memory/storage.db
 /.memory/storage.db-*
 /.memory/storage-audit.log
+
+# Eval harness run artifacts (Module 3.3). Collected per run, never committed.
+/.eval-artifacts/

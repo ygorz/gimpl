@@ -3,7 +3,7 @@
 GIMPL: Chocolate Heretic (C) being ported function by function to Rust,
 verified against built-in demos with blasphem.wad.
 
-Version: v0.1.7
+Version: v0.1.8
 
 # Agent Instructions
 
@@ -243,6 +243,7 @@ meets them:
 ## Tools the Orchestrator uses
 
 The Agent tool to invoke subagents; `mcp__coursetools__file_read`;
+`Read`, `Glob` and `Grep` only for the startup memory reads;
 `mcp__coursetools__file_write` only for run summaries under `docs/runs/`;
 `Bash` only for read-only git (`git status`, `git diff`, `git log`).
 Never use Bash to build, run the demo checks or change files. No storage
