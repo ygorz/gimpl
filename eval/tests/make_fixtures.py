@@ -3,8 +3,17 @@
 Run from the repository root:  python3 eval/tests/make_fixtures.py
 The fixtures are committed; this script only shows how they were made.
 They imitate a DEV-01 run (Task 7 replayed) in Claude Code's JSONL format.
-Field names follow Claude Code transcripts as of 2026; check them against
-the real DEV-01 run before trusting the fixture.
+The shape follows the real DEV-01-r1 run (Claude Code 2.1.325, 2026-11-16):
+- Agent calls run in the background: the Agent tool_result is only launch
+  metadata (toolUseResult.status "async_launched", agentId).
+- A subagent delivers its report by calling SubagentHandback({message}); the
+  main session then gets a meta user row "Another Claude session sent a
+  message" (origin.from = agentId) and a <task-notification> row.
+- api-request-blob rows repeat earlier tool_use blocks; they are not turns.
+- The orchestrator resumes the planner once with SendMessage (a second
+  hand-back) and loads MCP schemas with ToolSearch.
+- .claude/settings.local.json is untracked before the run and gone from
+  `git status` after it (Claude Code adds it to the global git ignore).
 
 valid/            passes every deterministic check
 malformed/        session.jsonl cut off mid-line
@@ -60,6 +69,29 @@ def res(tool_id, content, ts, side=False, extra=None):
                                                      "content": content}]}}
     row.update(extra or {})
     return row
+
+
+def blob(row):
+    """An api-request-blob row repeating a turn's content (not a turn)."""
+    return {"type": "api-request-blob", "sessionId": SESSION,
+            "message": {"role": row["message"]["role"], "content": row["message"]["content"]}}
+
+
+def handback_row(agent_id, report, ts):
+    """How the main session receives a background subagent's report."""
+    body = "\n".join("  " + l for l in report.splitlines())
+    return {"type": "user", "isMeta": True, "timestamp": ts, "sessionId": SESSION,
+            "origin": {"kind": "peer", "from": agent_id},
+            "message": {"role": "user", "content":
+                        f"Another Claude session sent a message:\n<agent-message from=\"{agent_id}\">\n"
+                        f"[Subagent hand-back] The report follows:\n{body}\n</agent-message>"}}
+
+
+def notification_row(agent_id, tool_id, ts):
+    return {"type": "user", "timestamp": ts, "sessionId": SESSION,
+            "message": {"role": "user", "content":
+                        f"<task-notification>\n<task-id>{agent_id}</task-id>\n<tool-use-id>{tool_id}"
+                        "</tool-use-id>\n<status>completed</status>\n</task-notification>"}}
 
 
 def mcp_text(obj):
@@ -124,15 +156,23 @@ APPROVE
 """,
 }
 
+RETRIEVE_FOLLOWUP = ("Retrieve calls made: 1. Query \"demo-suite failure paths exit codes\": "
+                     "lesson-demo-suite-exit-codes.md#0, vector, 0.71.")
+
 SUITE_OUT = ("IWAD OK: /workspace/wads/blasphem.wad\ntrace OK: tests/demos/heretic/golden/demo1.tics\n"
              "timed 4227 gametics\nengine exit code: 0\nPASS: demo1 4227 gametics, trace matches\n"
              "PASS: 1 demo(s)\nsuite exit: 0")
 
 
 def subagent(agent_id, role, prompt, clock):
-    """One subagent transcript: its prompt, its tool calls, its report."""
+    """One subagent transcript: its prompt, its tool calls, its report
+    (delivered through SubagentHandback, as in the real run)."""
     rows = [text_msg("user", prompt, clock())]
     rows[0]["isSidechain"] = True
+    reminder = text_msg("user", "<system-reminder>\nYour final report is delivered through "
+                        "SubagentHandback.\n</system-reminder>", rows[0]["timestamp"])
+    reminder.update(isMeta=True, isSidechain=True)
+    rows.append(reminder)
     n = 0
 
     def call(name, inp, out):
@@ -140,6 +180,7 @@ def subagent(agent_id, role, prompt, clock):
         n += 1
         tid = f"toolu_{agent_id}_{n}"
         rows.append(use(tid, name, inp, clock(), f"msg_{agent_id}_{n}", side=True))
+        rows.append(blob(rows[-1]))
         rows.append(res(tid, out, clock(), side=True))
 
     if role in ("planner", "fence-reviewer"):
@@ -158,11 +199,15 @@ def subagent(agent_id, role, prompt, clock):
                                            "calling_role": "implementer",
                                            "content": "Force a failure with a copied trace, never the golden."},
              mcp_text({"entry_id": LESSON_ID}))
-    final = text_msg("assistant", REPORTS[role], clock(), f"msg_{agent_id}_final",
-                     {"input_tokens": 300, "output_tokens": 600, "cache_creation_input_tokens": 1000,
-                      "cache_read_input_tokens": 9000})
-    final["isSidechain"] = True
-    rows.append(final)
+    call("SubagentHandback", {"message": REPORTS[role]},
+         [{"type": "text", "text": '{"success":true,"message":"Report delivered to your caller."}'}])
+    if role == "planner":  # resumed once by the orchestrator's SendMessage
+        note = text_msg("user", "The coordinator sent a message while you were working:\n"
+                        "List each retrieve query you ran.", clock())
+        note.update(isMeta=True, isSidechain=True)
+        rows.append(note)
+        call("SubagentHandback", {"message": RETRIEVE_FOLLOWUP},
+             [{"type": "text", "text": '{"success":true,"message":"Report delivered to your caller."}'}])
     return rows
 
 
@@ -178,6 +223,8 @@ def build_valid(d):
         tid = f"toolu_main_{n}"
         s.append(use(tid, name, inp, clock(), f"msg_main_{n}"))
         s.append(res(tid, out, clock(), extra=extra))
+        s.append(blob(s[-2]))
+        return tid
 
     main_call("Read", {"file_path": "/workspace/.memory/SCOPE.md"}, "GIMPL scope ...")
     main_call("Read", {"file_path": "/workspace/.memory/project/MEMORY_INDEX.md"}, "index ...")
@@ -186,14 +233,25 @@ def build_valid(d):
              ("i1", "implementer", f"Write {NEW_DOC} per the approved plan; store one lesson."),
              ("t2", "tester", "Rerun ./scripts/demo-suite.sh after the change; report lines, exit code, git status."),
              ("f1", "fence-reviewer", f"Review the diff: {NEW_DOC} only. Check scope and golden traces.")]
+    launched = [{"type": "text", "text": "Async agent launched successfully. (internal metadata)"}]
     for agent_id, role, prompt in steps:
         sub = subagent(agent_id, role, prompt, clock)
         with open(os.path.join(d, "subagents", f"agent-{agent_id}.jsonl"), "w") as f:
             f.write(lines(sub))
-        main_call("Agent", {"subagent_type": role, "description": role, "prompt": prompt},
-                  [{"type": "text", "text": REPORTS[role]}], extra={"toolUseResult": {"agentId": agent_id}})
+        with open(os.path.join(d, "subagents", f"agent-{agent_id}.meta.json"), "w") as f:
+            json.dump({"agentType": role, "description": role, "finished": True}, f)
+        tid = main_call("Agent", {"subagent_type": role, "description": role, "prompt": prompt},
+                        launched, extra={"toolUseResult": {"isAsync": True, "status": "async_launched",
+                                                           "agentId": agent_id}})
+        s.append(handback_row(agent_id, REPORTS[role], clock()))
+        s.append(notification_row(agent_id, tid, clock(0)))
         if role == "planner":  # George approves the plan; this wait is not agent time
             s.append(text_msg("user", "Approved. Tester before and after, this task only.", clock(120)))
+            main_call("SendMessage", {"to": agent_id, "message": "List each retrieve query you ran."},
+                      [{"type": "text", "text": '{"success":true,"resumedAgentId":"%s"}' % agent_id}])
+            s.append(handback_row(agent_id, RETRIEVE_FOLLOWUP, clock()))
+    main_call("ToolSearch", {"query": "select:mcp__coursetools__file_write", "max_results": 1},
+              [{"type": "tool_reference", "tool_name": "mcp__coursetools__file_write"}])
     main_call("Bash", {"command": "git status --porcelain"}, f"?? {NEW_DOC}")
     main_call("mcp__coursetools__file_write", {"path": SUMMARY, "content": "...", "role": "orchestrator"},
               mcp_text({"ok": True}))
@@ -207,7 +265,7 @@ def build_valid(d):
             "expected_path": ["planner", "tester", "implementer", "tester", "fence-reviewer"],
             "session_id": SESSION, "start_utc": "2026-11-17T17:00:00Z", "end_utc": clock(0)[:19] + "Z",
             "audit_offset_before": 3, "manifest_write_approved": False}
-    snap = {"head": "1fcf3926" + "0" * 32, "porcelain": [],
+    snap = {"head": "1fcf3926" + "0" * 32, "porcelain": ["?? .claude/settings.local.json"],
             "sha256": {"tests/demos/heretic/golden/demo1.tics": DEMO1,
                        "tests/demos/heretic/manifest": MANIFEST_SHA}, "audit_lines": 3}
     after = dict(snap, porcelain=[f"?? {NEW_DOC}", f"?? {SUMMARY}"], audit_lines=4)
