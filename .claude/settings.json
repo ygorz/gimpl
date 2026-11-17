@@ -25,6 +25,16 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/memory-secret-guard.py"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/orchestrator-bash-guard.py",
+            "onFailure": "block"
+          }
+        ]
       }
     ]
   }
