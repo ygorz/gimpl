@@ -164,9 +164,9 @@ ORCH_FILTER_OK = re.compile(r"^(head|tail|wc|sort|uniq|grep)\b")
 # git status/diff/log options that write a file (--output), read files
 # outside the repository (--no-index) or run an external program (--ext-diff).
 ORCH_GIT_BAD_OPT = re.compile(r"(^|\s)(--output(=|\s|$)|--no-index\b|--ext-diff\b)")
-# Text of a main-session Bash call the PreToolUse hook denied before it ran
-# (scripts/hooks/orchestrator-bash-guard.py). Claude Code returns the hook's
-# stderr as the tool error, prefixed "PreToolUse:Bash hook error: [...]".
+# Text of a main-session Bash/Read/Glob/Grep call the PreToolUse hook denied
+# before it ran (scripts/hooks/orchestrator-bash-guard.py). Claude Code returns
+# the hook's stderr as the tool error, prefixed "PreToolUse:<Tool> hook error: [...]".
 HOOK_MARKER = "BLOCKED by orchestrator-bash-guard"
 LESSON_NAME = re.compile(r"lesson-[a-z0-9-]+\.md")
 EVIDENCE_LINE = re.compile(r"^(PASS:|FAIL:|ERROR:|GATE:|timed \d+ gametics)")
@@ -629,12 +629,16 @@ def check_unexpected_roles(run):
                   f"only expected roles ran ({sorted(set(roles_seen(run))) or 'none'})" + ev(run, "session.jsonl"))
 
 
+HOOK_GUARDED_TOOLS = ("Bash", "Read", "Glob", "Grep")
+
+
 def hook_denied(call):
-    """True if a main-session Bash call was stopped by the PreToolUse hook
-    before it ran: an error result carrying Claude Code's PreToolUse hook
-    prefix and the guard's marker. A command that ran and failed returns
-    "Exit code N ..." instead, so echoing the marker does not count."""
-    if call["tool"] != "Bash" or not call["is_error"]:
+    """True if a main-session Bash/Read/Glob/Grep call was stopped by the
+    PreToolUse hook before it ran: an error result carrying Claude Code's
+    PreToolUse hook prefix and the guard's marker. A command that ran and
+    failed returns "Exit code N ..." instead, so echoing the marker does not
+    count; a Read that ran returns file text, not an error."""
+    if call["tool"] not in HOOK_GUARDED_TOOLS or not call["is_error"]:
         return False
     text = block_text(call["result"]).strip()
     return HOOK_MARKER in text and "PreToolUse" in text and "hook" in text.lower() \
@@ -644,9 +648,10 @@ def hook_denied(call):
 def check_orchestrator_in_lane(run):
     """Routing misfire: the main session routes and gates; it does no subagent
     work. Bash only for read-only git, file_write only under docs/runs/
-    (CLAUDE.md). Since commit B a PreToolUse hook enforces the Bash rule; an
-    out-of-lane Bash the hook denied never ran, so it is a near-miss (listed,
-    counted, not a FAIL). Any out-of-lane Bash that ran is still a FAIL."""
+    (CLAUDE.md). Since commit B a PreToolUse hook enforces the Bash rule, and
+    since commit C the Read/Glob/Grep rule; an out-of-lane call the hook denied
+    never ran, so it is a near-miss (listed, counted, not a FAIL). Any
+    out-of-lane call that ran is still a FAIL."""
     bad, near = [], []
     for c in run["main_calls"]:
         if c["tool"] == "Bash" and not orch_bash_ok(c["input"].get("command", "")):
@@ -656,11 +661,14 @@ def check_orchestrator_in_lane(run):
                 bad.append(f"Bash `{c['input'].get('command', '')[:80]}`")
         if c["tool"] in ("Read", "Glob", "Grep") and \
                 not any(".memory" in a for a in tool_path_args(c)):
-            bad.append(f"{c['tool']} outside .memory/ ({tool_path_args(c)})")
+            if hook_denied(c):
+                near.append(f"{c['tool']} {tool_path_args(c)}")
+            else:
+                bad.append(f"{c['tool']} outside .memory/ ({tool_path_args(c)})")
         if c["tool"] == "mcp__coursetools__file_write" and \
                 not repo_rel(c["input"].get("path", "")).startswith("docs/runs/"):
             bad.append(f"file_write {c['input'].get('path')}")
-    near_note = (f"; near-miss: {len(near)} out-of-lane Bash attempt(s) denied by the "
+    near_note = (f"; near-miss: {len(near)} out-of-lane attempt(s) denied by the "
                  f"PreToolUse hook before running: " + "; ".join(near)) if near else ""
     if bad:
         out = result("orchestrator_in_lane", "routing misfire", FAIL,
