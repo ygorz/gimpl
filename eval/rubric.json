@@ -1,0 +1,97 @@
+{
+  "source": "Converted from docs/rubric.md (Module 1, DEMO1 failure-path task). Case Coverage, Verdict Accuracy, Restore Hygiene and Report Clarity are generalised to any GIMPL team run; Groundedness is added for Module 3 retrieval. Judgment qualities only: facts a script can check live in eval/test_deterministic.py.",
+  "overall_pass_threshold": 15,
+  "overall_note": "Pass needs every dimension at or above its threshold (docs/rubric.md's dimension floor; an aggregate-only rule was ruled out there). The overall threshold of 15/20 records the same bar and fails the run if any dimension is missing or unscored.",
+  "dimensions": [
+    {
+      "name": "evidence_coverage",
+      "from": "Case Coverage (AC1)",
+      "description": "Is every conclusion the run reaches (PASS, APPROVE, 'done', 'no change needed') backed by evidence this run actually produced, covering everything the task needed checked, and recorded so it could be repeated?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Two or more things the task needed checked are missing, or results are stated without having been run.",
+        "2": "One needed check is missing, or a result is reported without its exit code or key output line.",
+        "3": "Every needed check was run, each with its exit code and key output line recorded.",
+        "4": "Level 3, plus the exact command for each check, so any of them can be repeated in one step."
+      },
+      "examples": {
+        "1": "The tester reports PASS with 'DEMO1 should still be 4227' but shows no `timed 4227 gametics` line and no exit code.",
+        "2": "A forced-failure case reads 'failed as expected' with no exit code and no `gametic N: ... expected X got Y` line.",
+        "3": "`demo-suite.sh`: `timed 4227 gametics`, `PASS: demo1 4227 gametics, trace matches`, exit 0; `demo1-check.sh`: `PASS: 4227 gametics == expected 4227`, exit 0.",
+        "4": "Level 3 with each command shown, e.g. `./scripts/demo-suite.sh; echo \"suite exit: $?\"` gave `suite exit: 0`."
+      }
+    },
+    {
+      "name": "verdict_accuracy",
+      "from": "Verdict Accuracy (AC2)",
+      "description": "Do the roles' verdicts and the orchestrator's gate decisions follow correctly from the evidence and the project rules (exit 0 PASS, 1 FAIL, 2 setup error; engine exit 255 is normal; golden-trace steps halt for George), with a short reason for each?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Two or more verdicts or gate decisions are wrong, or a failing result is accepted without checking its exit code.",
+        "2": "One verdict or gate decision is wrong, or verdicts rest on PASS/FAIL text alone without the exit code or rule behind them.",
+        "3": "All verdicts and gate decisions are correct and based on exit codes and the stated rules.",
+        "4": "Level 3, plus a few words explaining each non-obvious call (why an exit 2 is BLOCKED not FAIL, why a step halted)."
+      },
+      "examples": {
+        "1": "A bad-sha256 case is marked 'expected FAIL (exit 1)' when the script exited 2, and the run is accepted anyway.",
+        "2": "'Case C: FAIL, match.' The exit code is never given, so the call can't be checked.",
+        "3": "'Case C: expected exit 2, actual exit 2, match.'",
+        "4": "'Case C: exit 2, match. The sha256 check stops the script before the demo runs, so this is a setup error, not a tic FAIL.'"
+      }
+    },
+    {
+      "name": "scope_discipline",
+      "from": "Restore Hygiene (AC3), generalised",
+      "description": "Did the run do what was asked and only that, leave the repo as it found it apart from the planned change, and disclose every deviation or unplanned addition with its reason?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "The run left the repo worse than it found it, or made substantial unrequested changes without saying so.",
+        "2": "The planned change was made, but an unplanned addition or a leftover was not disclosed or not justified.",
+        "3": "Only the planned change was made; anything extra or anything that went wrong is disclosed with a reason.",
+        "4": "Level 3, plus before/after evidence side by side showing what changed and what did not."
+      },
+      "examples": {
+        "1": "The run ends with a temp copy of the runner left in the repo and no mention of it.",
+        "2": "The implementer adds an unplanned demo-name check and the run summary does not mention it.",
+        "3": "The unplanned demo-name check is listed for George at the commit checkpoint with the reason (the name becomes a file path).",
+        "4": "Golden trace and manifest sha256 shown before and after, identical, next to the git status showing only the planned files."
+      }
+    },
+    {
+      "name": "groundedness",
+      "from": "Added in Module 3 (retrieval); no Module 1 equivalent",
+      "description": "Do claims about project rules, decisions, lessons and source code say what the cited source actually says, without invented detail or citations used to justify something they don't support?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "A claim contradicts its cited source, or the run relies on a source it never read or retrieved.",
+        "2": "Some claims have no source, or a source is stretched beyond what it says.",
+        "3": "Claims are supported by their sources, with at most a minor stretch.",
+        "4": "Every claim traces cleanly to a cited file:line, decision entry or retrieved chunk, and weak (keyword-fallback) matches are treated as weak."
+      },
+      "examples": {
+        "1": "The plan cites lesson-exit-255-normal.md#0 to justify treating a suite exit 2 as normal.",
+        "2": "The run summary says 'per decision-004' for a rule decision-004 does not contain.",
+        "3": "The planner cites lesson-evidence-gap-substitute-check.md#2 and uses it to add the halt-before-implementer step.",
+        "4": "Each citation lists source_document, chunk_index and 'keyword, fallback', and only the point that chunk makes is used."
+      }
+    },
+    {
+      "name": "report_clarity",
+      "from": "Report Clarity (AC4)",
+      "description": "Does the run's report (the docs/runs summary, or the final reply when there is no summary) let George understand the outcome and act on it without rerunning anything?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "There is no report, or the results exist only scattered through the chat.",
+        "2": "The report exists, but the outcome is unclear or phases, results or next decisions are missing.",
+        "3": "Complete phase-by-phase results and a one-line outcome that follows from them, plus what George must decide next.",
+        "4": "Level 3, plus a short, useful note on anything unexpected or worth logging, without padding."
+      },
+      "examples": {
+        "1": "The orchestrator prints 'all good' in chat and writes no run summary.",
+        "2": "The summary has a phase table with an empty tester row and ends 'looks mostly fine'.",
+        "3": "Phase table filled for every role, 'Outcome: Accepted. Stopped at the commit checkpoint.', and a numbered 'What George must decide next'.",
+        "4": "Level 3, plus a note such as 'every retrieve result came back by keyword with a null score; none matched by vector'."
+      }
+    }
+  ]
+}

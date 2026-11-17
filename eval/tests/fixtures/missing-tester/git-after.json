@@ -1,0 +1,12 @@
+{
+  "head": "1fcf392600000000000000000000000000000000",
+  "porcelain": [
+    "?? docs/smoke-tests/demo-suite-failure-paths.md",
+    "?? docs/runs/dev01-run-1.md"
+  ],
+  "sha256": {
+    "tests/demos/heretic/golden/demo1.tics": "537e8a1fd73967c0099d1ee55c0586e353d5240d27dd3a41dfa15ac3757d2f30",
+    "tests/demos/heretic/manifest": "0f2c4d0b5b7f3e7e1a9d6c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39"
+  },
+  "audit_lines": 4
+}

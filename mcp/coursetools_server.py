@@ -60,6 +60,8 @@ DENIED_PATHS = (
     ROOT / ".memory" / "storage.db-wal",
     ROOT / ".memory" / "storage.db-shm",
     ROOT / ".memory" / "storage-audit.log",
+    ROOT / ".eval-artifacts",
+    ROOT / "docs" / "holdout-task-set.md",
 )
 
 

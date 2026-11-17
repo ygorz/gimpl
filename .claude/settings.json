@@ -9,7 +9,10 @@
       "Edit(./.memory/storage-audit.log)",
       "Read(//memory/**)",
       "Edit(//memory/**)",
-      "Bash(sqlite3 *)"
+      "Bash(sqlite3 *)",
+      "Read(./.eval-artifacts/**)",
+      "Edit(./.eval-artifacts/**)",
+      "Read(./docs/holdout-task-set.md)"
     ]
   },
   "hooks": {
@@ -20,6 +23,16 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/memory-secret-guard.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Read|Glob|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/orchestrator-bash-guard.py",
+            "onFailure": "block"
           }
         ]
       }
