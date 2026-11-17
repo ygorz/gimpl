@@ -27,7 +27,7 @@
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": "Bash|Read|Glob|Grep",
         "hooks": [
           {
             "type": "command",
