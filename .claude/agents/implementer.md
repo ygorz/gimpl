@@ -12,6 +12,8 @@ tools:
   - mcp__coursetools__file_write
   - mcp__coursetools__codebase_search
   - mcp__storage__write_entry        # one lesson per task, proj-lessons
+skills:                            # preloaded per docs/governance-policy.md; no Skill tool, so no other skill can load
+  - summarize-session
 disallowedTools:
   - mcp__coursetools__shell
   - mcp__coursetools__test_runner
@@ -40,7 +42,7 @@ mcpServers:
         STORAGE_DB_PATH: /workspace/.memory/storage.db
         STORAGE_AUDIT_PATH: /workspace/logs/storage-audit-log.jsonl
 autonomy: medium
-version: 1.0.1
+version: 1.0.2
 ---
 
 # Implementer

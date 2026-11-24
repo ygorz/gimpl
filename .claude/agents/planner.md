@@ -10,6 +10,8 @@ tools:
   - mcp__coursetools__file_read
   - mcp__coursetools__codebase_search
   - mcp__retrieval__retrieve         # prior lessons, proj-lessons, internal
+skills:                            # preloaded per docs/governance-policy.md; no Skill tool, so no other skill can load
+  - summarize-session
 disallowedTools:
   - mcp__coursetools__file_write
   - mcp__coursetools__shell
@@ -40,7 +42,7 @@ mcpServers:
         RETRIEVAL_MAX_CEILING: internal
         RETRIEVAL_AUDIT_LOG: /workspace/logs/retrieval-audit-log.jsonl
 autonomy: high
-version: 1.0.1
+version: 1.0.2
 ---
 
 # Planner

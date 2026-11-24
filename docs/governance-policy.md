@@ -1,6 +1,6 @@
 # Agent Governance Policy
 
-Version: v1.0.0
+Version: v1.1.0
 Last updated: 2026-11-24
 Reviewed by: George Gorzhiyev
 
@@ -33,6 +33,8 @@ To widen access, open a pull request with: the proposed grant, a concrete justif
 This policy has one entry for each of the 7 roles in `.claude/agents/`. Course role names map to GIMPL roles as follows: Reviewer = fence-reviewer (review-only), Tester = tester, Implementer = implementer, Orchestrator = orchestrator. Project Manager is not used in GIMPL, because there is no ticket or PR-description work. GIMPL adds planner, port-planner and demo-verifier.
 
 The storage server exposes five operations (`write_entry`, `read_entry`, `list_entries`, `update_entry`, `delete_entry`) and the retrieval server exposes one (`retrieve`). The project skills are `summarize-session` and `write-handoff`. Classification levels, lowest to highest, are public, internal, confidential and secret.
+
+Skill activation scope is enforced in the agent files. No subagent has the `Skill` tool, so no subagent can activate a skill on demand. Each subagent's `skills:` frontmatter preloads exactly the skills its entry permits, and no others. The orchestrator is the main session; it has the `Skill` tool and is permitted both project skills. Known limit: a role with `Read` can still open a `SKILL.md` as a plain file. The red-team prompts test this case.
 
 In GIMPL, "memory" is `/workspace/.memory/`: project memory, the lessons corpus behind `retrieve`, and the storage database. "Memory mounted" on a read-only workspace means the role sees it read-only. "Memory omitted" means the startup script hides it.
 

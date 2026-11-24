@@ -9,6 +9,8 @@ model: sonnet
 tools:
   - Bash
   - mcp__coursetools__file_read
+skills:                            # preloaded per docs/governance-policy.md; no Skill tool, so no other skill can load
+  - summarize-session
 disallowedTools:
   - mcp__coursetools__file_write
   - mcp__coursetools__test_runner
@@ -27,7 +29,7 @@ disallowedTools:
   - mcp__storage__delete_entry
   - mcp__retrieval__retrieve
 autonomy: medium
-version: 1.0.1
+version: 1.0.2
 ---
 
 # Tester

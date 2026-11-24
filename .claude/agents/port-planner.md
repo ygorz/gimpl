@@ -5,6 +5,10 @@ description: >
   spec. Use when planning a GIMPL port: finding callers, globals and demo
   coverage, then drafting the spec under docs/port-specs/.
 tools: Read, Grep, Glob, Write, Edit
+skills:                            # preloaded per docs/governance-policy.md; no Skill tool, so no other skill can load
+  - summarize-session
+  - write-handoff
+version: 1.0.0
 ---
 
 You plan ports of Chocolate Heretic functions from C to Rust for GIMPL.
