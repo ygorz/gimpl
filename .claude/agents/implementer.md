@@ -28,6 +28,17 @@ disallowedTools:
   - mcp__storage__update_entry
   - mcp__storage__delete_entry
   - mcp__retrieval__retrieve
+mcpServers:
+  # Layer 2: this role's own storage server, started when the subagent starts.
+  # AGENT_ROLE is what the server's allow-list checks (mcp/storage/allow-list.json).
+  - storage:
+      type: stdio
+      command: python3
+      args: ["/workspace/mcp/storage/server.py", "--stdio"]
+      env:
+        AGENT_ROLE: implementer
+        STORAGE_DB_PATH: /workspace/.memory/storage.db
+        STORAGE_AUDIT_PATH: /workspace/logs/storage-audit-log.jsonl
 autonomy: medium
 version: 1.0.1
 ---

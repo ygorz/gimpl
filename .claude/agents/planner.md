@@ -27,6 +27,18 @@ disallowedTools:
   - mcp__storage__list_entries
   - mcp__storage__update_entry
   - mcp__storage__delete_entry
+mcpServers:
+  # Layer 2: this role's own retrieval server, started when the subagent starts.
+  # AGENT_ROLE is what the server's allow-list checks (mcp/retrieval/allow-list.json).
+  - retrieval:
+      type: stdio
+      command: python3
+      args: ["/workspace/mcp/retrieval/server.py", "--stdio"]
+      env:
+        AGENT_ROLE: planner
+        RETRIEVAL_REFERENCE_DIR: /workspace/.memory/reference/lessons
+        RETRIEVAL_MAX_CEILING: internal
+        RETRIEVAL_AUDIT_LOG: /workspace/logs/retrieval-audit-log.jsonl
 autonomy: high
 version: 1.0.1
 ---

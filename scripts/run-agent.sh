@@ -84,10 +84,9 @@ fi
 # Claude Code login, kept in the claude-auth volume by docker-entrypoint.sh.
 ARGS+=( -v claude-auth:/claude-auth )
 
-# Audit logs, written by the MCP servers; logs/ is outside git.
-ARGS+=( -v "$(pwd)/logs:/logs:rw" )
-ARGS+=( -e "STORAGE_AUDIT_PATH=/logs/storage-audit-log.jsonl" )
-ARGS+=( -e "RETRIEVAL_AUDIT_LOG=/logs/retrieval-audit-log.jsonl" )
+# Audit logs, written by the MCP servers to /workspace/logs (git-ignored).
+# Mounted read-write on its own so read-only roles can still be audited.
+ARGS+=( -v "$(pwd)/logs:/workspace/logs:rw" )
 
 # Role identity, read by the MCP servers to decide what this role may call.
 ARGS+=( -e "AGENT_ROLE=${ROLE}" )

@@ -74,5 +74,9 @@ compile_commands.json
 /.memory/storage.db-*
 /.memory/storage-audit.log
 
+# MCP audit logs (Module 4): storage and retrieval, written by the servers.
+# The operator reads them; tails are pasted into eval/enforcement-verification.md.
+/logs/
+
 # Eval harness run artifacts (Module 3.3). Collected per run, never committed.
 /.eval-artifacts/

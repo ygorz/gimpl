@@ -133,7 +133,7 @@ In GIMPL, "memory" is `/workspace/.memory/`: project memory, the lessons corpus 
 | delete_entry | storage | NO | No agent manages the lesson lifecycle in GIMPL; the operator curates lessons, so delete is denied even for the orchestrator. |
 | retrieve | retrieval | NO | Lessons come out through the planner and fence-reviewer, who cite them in their results (calibration-log.md, gap 10: main-session storage and retrieval exclusion). |
 
-The storage audit log is read by the operator, not by an agent. Direct reads of `.memory/storage.db`, `.memory/storage-audit.log` and `.memory/reference/lessons/` are denied in `.claude/settings.json` for the main session and every subagent, so these denials are not tied to one tool; the same paths are blocked for Read, Grep, Glob and `sqlite3` (calibration-log.md, near-miss: displacement, DEV-02-r2).
+The storage audit log is read by the operator, not by an agent. Direct reads of `.memory/storage.db`, `.memory/reference/lessons/` and the audit logs under `logs/` are denied in `.claude/settings.json` for the main session and every subagent, so these denials are not tied to one tool; the same paths are blocked for Read, Grep, Glob and `sqlite3` (calibration-log.md, near-miss: displacement, DEV-02-r2).
 
 ### Skill activation scope
 

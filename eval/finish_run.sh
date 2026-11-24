@@ -26,8 +26,8 @@ fi
 echo "transcript: session.jsonl + $(find "$DIR/subagents" -name 'agent-*.jsonl' | wc -l) subagent file(s)"
 
 OFFSET=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["audit_offset_before"])' "$DIR/run.json")
-if [ -f .memory/storage-audit.log ]; then
-  tail -n +"$((OFFSET + 1))" .memory/storage-audit.log > "$DIR/audit.jsonl"
+if [ -f logs/storage-audit-log.jsonl ]; then
+  tail -n +"$((OFFSET + 1))" logs/storage-audit-log.jsonl > "$DIR/audit.jsonl"
 else
   : > "$DIR/audit.jsonl"
 fi

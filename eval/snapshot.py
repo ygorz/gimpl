@@ -17,7 +17,7 @@ import sys
 
 GOLDEN = "tests/demos/heretic/golden"
 MANIFEST = "tests/demos/heretic/manifest"
-AUDIT = ".memory/storage-audit.log"
+AUDIT = "logs/storage-audit-log.jsonl"
 
 
 def git(*args):
