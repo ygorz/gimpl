@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     procps \
+    # Module 4 tooling: jq reads JSON audit logs, sqlite3 inspects the storage DB
+    jq \
+    sqlite3 \
     # Claude Code runs on Node.js
     nodejs \
     npm \
@@ -40,6 +43,11 @@ RUN pip install --no-cache-dir -r /tmp/requirements-mcp.txt
 ENV HF_HOME=/opt/hf-cache
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 ENV HF_HUB_OFFLINE=1
+
+# Module 4 CI and policy tests: pytest runs eval/, PyYAML reads agent
+# frontmatter, jsonschema validates handoffs (4.3). Pins in requirements-ci.txt.
+COPY requirements-ci.txt /tmp/requirements-ci.txt
+RUN pip install --no-cache-dir -r /tmp/requirements-ci.txt
 
 # Install Claude Code
 RUN npm install -g @anthropic-ai/claude-code

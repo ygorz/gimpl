@@ -1,0 +1,6 @@
+# Module 4 CI and policy tests (see docs/adr/ADR-000).
+# Pinned to exact versions (tested together 2026-11-24), like requirements-mcp.txt.
+pytest==9.2.0
+pytest-json-report==1.5.0
+PyYAML==6.0.4
+jsonschema==4.26.0
