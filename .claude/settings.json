@@ -37,6 +37,16 @@
             "onFailure": "block"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|mcp__coursetools__file_write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/decision-write-guard.py",
+            "onFailure": "block"
+          }
+        ]
       }
     ]
   }

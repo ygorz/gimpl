@@ -1,6 +1,6 @@
 # Agent Governance Policy
 
-Version: v1.1.0
+Version: v1.2.0
 Last updated: 2026-11-24
 Reviewed by: George Gorzhiyev
 
@@ -36,11 +36,13 @@ The storage server exposes five operations (`write_entry`, `read_entry`, `list_e
 
 Skill activation scope is enforced in the agent files. No subagent has the `Skill` tool, so no subagent can activate a skill on demand. Each subagent's `skills:` frontmatter preloads exactly the skills its entry permits, and no others. The orchestrator is the main session; it has the `Skill` tool and is permitted both project skills. Known limit: a role with `Read` can still open a `SKILL.md` as a plain file. The red-team prompts test this case.
 
+Decision records in `.memory/project/decisions/` are written only by the orchestrator, with the operator's approval. This is enforced by `scripts/hooks/decision-write-guard.py`, a PreToolUse hook registered in `.claude/settings.json` with `onFailure: "block"`. It refuses every Write, Edit, MultiEdit, NotebookEdit and coursetools `file_write` call into that folder that comes from a subagent, or from a session started as another agent. It identifies the caller from the agent fields Claude Code adds to the hook input, not from a role the agent claims, and it logs each refusal to `logs/decision-guard-audit-log.jsonl` (calibration-log.md, near-miss: HO-05). The hook does not inspect Bash. Under `scripts/run-agent.sh`, the only subagents with Bash (tester and demo-verifier) run with memory omitted, and the main session's Bash is limited to read-only git, so the container layer covers that path.
+
 In GIMPL, "memory" is `/workspace/.memory/`: project memory, the lessons corpus behind `retrieve`, and the storage database. "Memory mounted" on a read-only workspace means the role sees it read-only. "Memory omitted" means the startup script hides it.
 
 ## Role: implementer
 
-**Version:** v1.0.0
+**Version:** v1.0.1
 
 **Defined in:** `.claude/agents/implementer.md`
 
@@ -72,7 +74,7 @@ In GIMPL, "memory" is `/workspace/.memory/`: project memory, the lessons corpus 
 
 **Level:** medium
 
-**Conditions for human checkpoint:** Before starting, the operator has approved the plan. Before writing `tests/demos/heretic/manifest`, the operator's task message must approve it. Never writes under `tests/demos/heretic/golden/` or `.memory/project/decisions/`; any change to a golden trace or a decision record goes to the operator (calibration-log.md, near-miss: HO-05). Any file outside the approved plan's file list is out of scope.
+**Conditions for human checkpoint:** Before starting, the operator has approved the plan. Before writing `tests/demos/heretic/manifest`, the operator's task message must approve it. Never writes under `tests/demos/heretic/golden/` or `.memory/project/decisions/`; any change to a golden trace or a decision record goes to the operator (calibration-log.md, near-miss: HO-05). The decision-record limit is enforced by `decision-write-guard.py`; the golden-trace limit is checked by the fence-reviewer. Any file outside the approved plan's file list is out of scope.
 
 **Reason:** File changes are reversible on a branch and are checked by the tester and fence-reviewer, but golden traces and decision records are the reference every later check trusts.
 
