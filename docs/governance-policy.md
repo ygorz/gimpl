@@ -1,6 +1,6 @@
 # Agent Governance Policy
 
-Version: v1.3.0
+Version: v1.4.0
 Last updated: 2026-11-24
 Reviewed by: George Gorzhiyev
 
@@ -30,13 +30,13 @@ To widen access, open a pull request with: the proposed grant, a concrete justif
 
 ## Roles covered
 
-This policy has one entry for each of the 7 roles in `.claude/agents/`. Course role names map to GIMPL roles as follows: Reviewer = fence-reviewer (review-only), Tester = tester, Implementer = implementer, Orchestrator = orchestrator. Project Manager is not used in GIMPL, because there is no ticket or PR-description work. GIMPL adds planner, port-planner and demo-verifier.
+This policy has one entry for each of the 8 roles in `.claude/agents/`. Course role names map to GIMPL roles as follows: Reviewer = fence-reviewer (review-only), Tester = tester, Implementer = implementer, Orchestrator = orchestrator. Project Manager is not used in GIMPL, because there is no ticket or PR-description work. GIMPL adds planner, port-planner, demo-verifier and trace-auditor.
 
 The storage server exposes five operations (`write_entry`, `read_entry`, `list_entries`, `update_entry`, `delete_entry`) and the retrieval server exposes one (`retrieve`). The project skills are `summarize-session` and `write-handoff`. Classification levels, lowest to highest, are public, internal, confidential and secret.
 
-Skill activation scope is enforced in the agent files. No subagent has the `Skill` tool, so no subagent can activate a skill on demand. Each subagent's `skills:` frontmatter preloads exactly the skills its entry permits, and no others. The orchestrator is the main session; it has the `Skill` tool and is permitted both project skills. Reading a `SKILL.md` as a plain file would get around this scope, the same displacement seen when blocking one tool moved reads to another (calibration-log.md, near-miss: displacement, DEV-02-r2), so that path is closed too. `.claude/settings.json` denies Read and Edit on `.claude/skills/`, and Claude Code applies the Read rule to Grep and Glob on a best-effort basis. The coursetools server lists `.claude/skills` in its denied paths, so `file_read`, `file_write` and `codebase_search` refuse it for every role. `scripts/hooks/skill-file-guard.py` refuses a subagent Bash command that names a skill file and logs the refusal to `logs/skill-guard-audit-log.jsonl`. Known limit: that Bash check matches the path as text, so a tester or demo-verifier command that reaches the files without naming them, such as a glob, is not caught. A skill file holds instructions only, so such a read grants no tool or permission the role does not already have. Red-team prompt 7 tests the file-read case.
+Skill activation scope is enforced in the agent files. No subagent has the `Skill` tool, so no subagent can activate a skill on demand. Each subagent's `skills:` frontmatter preloads exactly the skills its entry permits, and no others. The orchestrator is the main session; it has the `Skill` tool and is permitted both project skills. Reading a `SKILL.md` as a plain file would get around this scope, the same displacement seen when blocking one tool moved reads to another (calibration-log.md, near-miss: displacement, DEV-02-r2), so that path is closed too. `.claude/settings.json` denies Read and Edit on `.claude/skills/`, and Claude Code applies the Read rule to Grep and Glob on a best-effort basis. The coursetools server lists `.claude/skills` in its denied paths, so `file_read`, `file_write` and `codebase_search` refuse it for every role. `scripts/hooks/skill-file-guard.py` refuses a subagent Bash command that names a skill file and logs the refusal to `logs/skill-guard-audit-log.jsonl`. Known limit: that Bash check matches the path as text, so a tester, demo-verifier or trace-auditor command that reaches the files without naming them, such as a glob, is not caught. A skill file holds instructions only, so such a read grants no tool or permission the role does not already have. Red-team prompt 7 tests the file-read case.
 
-Decision records in `.memory/project/decisions/` are written only by the orchestrator, with the operator's approval. This is enforced by `scripts/hooks/decision-write-guard.py`, a PreToolUse hook registered in `.claude/settings.json` with `onFailure: "block"`. It refuses every Write, Edit, MultiEdit, NotebookEdit and coursetools `file_write` call into that folder that comes from a subagent, or from a session started as another agent. It identifies the caller from the agent fields Claude Code adds to the hook input, not from a role the agent claims, and it logs each refusal to `logs/decision-guard-audit-log.jsonl` (calibration-log.md, near-miss: HO-05). The hook does not inspect Bash. Under `scripts/run-agent.sh`, the only subagents with Bash (tester and demo-verifier) run with memory omitted, and the main session's Bash is limited to read-only git, so the container layer covers that path.
+Decision records in `.memory/project/decisions/` are written only by the orchestrator, with the operator's approval. This is enforced by `scripts/hooks/decision-write-guard.py`, a PreToolUse hook registered in `.claude/settings.json` with `onFailure: "block"`. It refuses every Write, Edit, MultiEdit, NotebookEdit and coursetools `file_write` call into that folder that comes from a subagent, or from a session started as another agent. It identifies the caller from the agent fields Claude Code adds to the hook input, not from a role the agent claims, and it logs each refusal to `logs/decision-guard-audit-log.jsonl` (calibration-log.md, near-miss: HO-05). The hook does not inspect Bash. Under `scripts/run-agent.sh`, the only subagents with Bash (tester, demo-verifier and trace-auditor) run with memory omitted, and the main session's Bash is limited to read-only git, so the container layer covers that path.
 
 In GIMPL, "memory" is `/workspace/.memory/`: project memory, the lessons corpus behind `retrieve`, and the storage database. "Memory mounted" on a read-only workspace means the role sees it read-only. "Memory omitted" means the startup script hides it.
 
@@ -321,3 +321,49 @@ The storage audit log is read by the operator, not by an agent. Direct reads of 
 **Reason:** Specs are reversible documents, but they set the plan for a port, so the operator sets each phase.
 
 **Container permissions:** workspace read-write, memory omitted
+
+## Role: trace-auditor
+
+**Version:** v1.0.0
+
+**Defined in:** `.claude/agents/trace-auditor.md`
+
+**Job:** Audits the Heretic reference data before a port is verified against it. For each demo in `tests/demos/heretic/manifest`, it checks that the golden trace exists, that its sha256 and line count match the manifest, that the trace keeps the v1 format (decision-003), that the source commit exists in git, and that neither file has changed since the baseline the operator names. It also checks the manifest values against the approved values that the operator copies into the task from the approving decision record (for demo1, decision-006). It reports CLEAN or DRIFT with evidence and never fixes anything. Every port check compares against these files, so drift in them makes a passing demo suite meaningless. In HO-05 the manifest's source commit was changed and the change was approved without anyone checking where it came from (calibration-log.md, near-miss: HO-05).
+
+### MCP server and operation access
+
+| Operation | Server | Granted | Justification / Denial reason |
+|---|---|---|---|
+| write_entry | storage | NO | An auditor's verdict belongs in its report, where the operator reads it next to the evidence. A stored "trace verified" lesson would become authority that the planner and fence-reviewer cite later without the evidence, the same provenance risk as a self-written decision record (calibration-log.md, near-miss: HO-05). |
+| read_entry | storage | NO | The audit compares files and git history; a stored entry is never audit evidence (least privilege). |
+| list_entries | storage | NO | Same as `read_entry`: the audit browses no stored state (least privilege). |
+| update_entry | storage | NO | The auditor changes no stored state. Rewriting a lesson about the reference data would change what later checks trust (calibration-log.md, near-miss: HO-05). |
+| delete_entry | storage | NO | An auditor removes nothing; no agent manages the lesson lifecycle. |
+| retrieve | retrieval | NO | A lesson is never audit evidence; the facts come from the manifest, the traces, git and the approved values in the task (least privilege). The role also runs with memory omitted, so it has no corpus to search. |
+
+### Skill activation scope
+
+| Skill | Activation permitted | Reason if denied |
+|---|---|---|
+| summarize-session | NO | An audit is one short pass that ends in a fixed-format report; there is no long session to summarize, and a second summary would be a restatement the orchestrator could cite instead of the evidence (least privilege). |
+| write-handoff | NO | The auditor returns a verdict to the orchestrator; it does not end or hand off sessions. |
+
+### Data classification ceiling
+
+**Maximum level:** internal
+
+**Reason:** The audit reads the manifest, the golden traces, git history and the approved values from an internal decision record, nothing above internal.
+
+### Autonomy level
+
+**Level:** high
+
+**Conditions for human checkpoint:** Output is advisory only. The operator launches the role in its own container with `./scripts/run-agent.sh trace-auditor`; it is not in the orchestrator's routing. Every DRIFT finding goes to the operator, and the auditor never proposes regenerating a trace or editing the manifest as the fix. Only the operator re-records reference data, under coding standard 4 and a new decision entry.
+
+**Reason:** The role holds Bash only to hash files, count lines and read git history. Its container cannot change the workspace and cannot see project memory, so it can run without a checkpoint; the checkpoint sits on what is done with a DRIFT finding.
+
+**Container permissions:** workspace read-only, memory omitted
+
+**Why these two denials are enforced in the container:** The role holds Bash, and a Bash command never passes through an MCP server, `decision-write-guard.py` does not inspect Bash, and the `.claude/settings.json` Edit rules do not cover it. If a port of `P_GiveBody` desyncs at a late tic and the auditor is told the trace is "stale", a writable workspace would let `sed -i` or a `-tichash` rerun overwrite `tests/demos/heretic/golden/demo1.tics` or the manifest's sha256. The demo suite would then pass and the port's regression would be hidden (calibration-log.md, near-miss: HO-05). With memory mounted, the same Bash could read `.memory/reference/lessons/` or `.memory/storage.db` with a command the Read deny rules do not recognize, such as `python3 -c`. That is the displacement pattern seen when blocking one tool moved reads to another (calibration-log.md, near-miss: displacement, DEV-02-r2), and here it would bypass the retrieval ceiling. The auditor does not need memory, because the operator copies the approved sha256, gametics and source commit from the decision record into the task.
+
+**Known limit:** these container denials hold only when the role runs in its own container. A subagent shares the container of the session that invokes it, so a trace-auditor invoked from the orchestrator's session would run with that session's read-write workspace and mounted memory. The role is therefore launched only by the operator with `run-agent.sh`, and the orchestrator does not route to it. That rule is held by instruction today. Red-team prompt 9 tests the container boundary.
