@@ -14,7 +14,9 @@
       "Edit(./.eval-artifacts/**)",
       "Read(./docs/holdout-task-set.md)",
       "Read(./logs/**)",
-      "Edit(./logs/**)"
+      "Edit(./logs/**)",
+      "Read(./.claude/skills/**)",
+      "Edit(./.claude/skills/**)"
     ]
   },
   "hooks": {
@@ -44,6 +46,16 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/decision-write-guard.py",
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/skill-file-guard.py",
             "onFailure": "block"
           }
         ]

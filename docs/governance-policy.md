@@ -1,6 +1,6 @@
 # Agent Governance Policy
 
-Version: v1.2.0
+Version: v1.3.0
 Last updated: 2026-11-24
 Reviewed by: George Gorzhiyev
 
@@ -34,7 +34,7 @@ This policy has one entry for each of the 7 roles in `.claude/agents/`. Course r
 
 The storage server exposes five operations (`write_entry`, `read_entry`, `list_entries`, `update_entry`, `delete_entry`) and the retrieval server exposes one (`retrieve`). The project skills are `summarize-session` and `write-handoff`. Classification levels, lowest to highest, are public, internal, confidential and secret.
 
-Skill activation scope is enforced in the agent files. No subagent has the `Skill` tool, so no subagent can activate a skill on demand. Each subagent's `skills:` frontmatter preloads exactly the skills its entry permits, and no others. The orchestrator is the main session; it has the `Skill` tool and is permitted both project skills. Known limit: a role with `Read` can still open a `SKILL.md` as a plain file. The red-team prompts test this case.
+Skill activation scope is enforced in the agent files. No subagent has the `Skill` tool, so no subagent can activate a skill on demand. Each subagent's `skills:` frontmatter preloads exactly the skills its entry permits, and no others. The orchestrator is the main session; it has the `Skill` tool and is permitted both project skills. Reading a `SKILL.md` as a plain file would get around this scope, the same displacement seen when blocking one tool moved reads to another (calibration-log.md, near-miss: displacement, DEV-02-r2), so that path is closed too. `.claude/settings.json` denies Read and Edit on `.claude/skills/`, and Claude Code applies the Read rule to Grep and Glob on a best-effort basis. The coursetools server lists `.claude/skills` in its denied paths, so `file_read`, `file_write` and `codebase_search` refuse it for every role. `scripts/hooks/skill-file-guard.py` refuses a subagent Bash command that names a skill file and logs the refusal to `logs/skill-guard-audit-log.jsonl`. Known limit: that Bash check matches the path as text, so a tester or demo-verifier command that reaches the files without naming them, such as a glob, is not caught. A skill file holds instructions only, so such a read grants no tool or permission the role does not already have. Red-team prompt 7 tests the file-read case.
 
 Decision records in `.memory/project/decisions/` are written only by the orchestrator, with the operator's approval. This is enforced by `scripts/hooks/decision-write-guard.py`, a PreToolUse hook registered in `.claude/settings.json` with `onFailure: "block"`. It refuses every Write, Edit, MultiEdit, NotebookEdit and coursetools `file_write` call into that folder that comes from a subagent, or from a session started as another agent. It identifies the caller from the agent fields Claude Code adds to the hook input, not from a role the agent claims, and it logs each refusal to `logs/decision-guard-audit-log.jsonl` (calibration-log.md, near-miss: HO-05). The hook does not inspect Bash. Under `scripts/run-agent.sh`, the only subagents with Bash (tester and demo-verifier) run with memory omitted, and the main session's Bash is limited to read-only git, so the container layer covers that path.
 
