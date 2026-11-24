@@ -118,11 +118,12 @@ Both confidential chunks matched the query and were withheld, and each withheld 
 ## Known limit
 
 `AGENT_ROLE` is set by the agent file that starts the server. A role with Bash access could start its own server process with a forged `AGENT_ROLE`. Container mounts (Layer 1) narrow what such a process could reach, but do not prevent it. The red-team prompts in `eval/red-team-prompts.md` test this case.
+
 ## Lesson 4.1 Exercise 1: trace-auditor
 
 **Date:** 2026-11-24 (all times UTC)
 **Policy:** `docs/governance-policy.md` v1.4.0, `## Role: trace-auditor`
-**Commits verified:** `1a0207da` (policy entry) and the enforcement commit that adds this section
+**Commits verified:** `1a0207da` (policy entry), `80f337f9` (enforcement in both layers), and `f45bcea0` (red-team prompt 9 and 72 passing policy tests)
 
 The trace-auditor holds Bash and no MCP grant. Layer 1 is its hard boundary for writes and for project memory. Layer 2 refuses every storage and retrieval call it makes.
 

@@ -345,8 +345,8 @@ The storage audit log is read by the operator, not by an agent. Direct reads of 
 
 | Skill | Activation permitted | Reason if denied |
 |---|---|---|
-| summarize-session | NO | An audit is one short pass that ends in a fixed-format report; there is no long session to summarize, and a second summary would be a restatement the orchestrator could cite instead of the evidence (least privilege). |
-| write-handoff | NO | The auditor returns a verdict to the orchestrator; it does not end or hand off sessions. |
+| summarize-session | NO | An audit is one short pass that ends in a fixed-format report; there is no long session to summarize, and a second summary would be a restatement later checks could cite instead of the evidence (least privilege). |
+| write-handoff | NO | The auditor reports CLEAN or DRIFT to the operator and exits; it does not end or hand off sessions (least privilege). |
 
 ### Data classification ceiling
 
