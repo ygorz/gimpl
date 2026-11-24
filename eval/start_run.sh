@@ -3,7 +3,9 @@
 # claude command to use. Run inside the container from /workspace.
 #   eval/start_run.sh <RUN-ID> <TASK-ID> <dev|holdout> <role> [<role> ...]
 # Roles are the expected path in order, e.g. planner tester implementer tester fence-reviewer.
-# Optional env: CANARY=<string>  MANIFEST_APPROVED=1  ALLOWED_PATHS="a b"  START_SERVERS=1
+# Optional env: CANARY=<string>  MANIFEST_APPROVED=1  ALLOWED_PATHS="a b"
+# Storage and retrieval are stdio servers started by the agent files that are
+# granted them (mcpServers frontmatter), so there are no ports to start here.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -37,20 +39,8 @@ if e.get("ALLOWED_PATHS"):
 json.dump(meta, open(os.path.join(e["DIR"], "run.json"), "w"), indent=2)
 EOF
 
-port_open() { python3 -c "import socket,sys; s=socket.socket(); s.settimeout(1); sys.exit(s.connect_ex(('127.0.0.1',$1)))"; }
-if [ "${START_SERVERS:-0}" = "1" ]; then
-  if port_open 8001 || port_open 8002; then
-    echo "ERROR: a server is already on 8001/8002; stop it or run without START_SERVERS=1" >&2; exit 1
-  fi
-  STORAGE_DB_PATH=/workspace/.memory/storage.db STORAGE_AUDIT_PATH=/workspace/.memory/storage-audit.log \
-    nohup python3 mcp/storage/server.py --port 8001 --host 127.0.0.1 >"$DIR/storage.log" 2>&1 &
-  RETRIEVAL_REFERENCE_DIR=/workspace/.memory/reference/lessons \
-    nohup python3 mcp/retrieval/server.py --port 8002 --host 127.0.0.1 >"$DIR/retrieval.log" 2>&1 &
-  for _ in $(seq 1 120); do port_open 8001 && port_open 8002 && break; sleep 1; done
-fi
-for p in 8001 8002; do
-  port_open $p || { echo "ERROR: nothing listening on 127.0.0.1:$p (storage 8001, retrieval 8002)" >&2; exit 1; }
-done
+# Audit logs (git-ignored): logs/storage-audit-log.jsonl, logs/retrieval-audit-log.jsonl
+mkdir -p logs
 
 echo "Run dir: $DIR"
 echo "Expected path: ${*:-main session only}"

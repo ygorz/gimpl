@@ -1,8 +1,10 @@
 ---
 name: demo-verifier
 description: Verifies that the Chocolate Heretic build still replays every pinned demo tic for tic, using the per-tic demo suite with demo1-check.sh as a cross-check. Use after any change to src/heretic, the build, or a Rust port, or when asked to check the demos. Reports PASS or FAIL with evidence. Never fixes anything.
-version: 0.2.0
+version: 0.2.1
 tools: Read, Grep, Glob, Bash
+skills:                            # preloaded per docs/governance-policy.md; no Skill tool, so no other skill can load
+  - summarize-session
 disallowedTools: Write, Edit, NotebookEdit, WebFetch, WebSearch, mcp__storage__write_entry, mcp__storage__read_entry, mcp__storage__list_entries, mcp__storage__update_entry, mcp__storage__delete_entry, mcp__retrieval__retrieve
 model: inherit
 ---

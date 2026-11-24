@@ -10,6 +10,8 @@ tools:
   - mcp__coursetools__file_read
   - mcp__coursetools__codebase_search
   - mcp__retrieval__retrieve         # lessons to check against, internal
+skills:                            # preloaded per docs/governance-policy.md; no Skill tool, so no other skill can load
+  - summarize-session
 disallowedTools:
   - mcp__coursetools__file_write
   - mcp__coursetools__shell
@@ -27,8 +29,20 @@ disallowedTools:
   - mcp__storage__list_entries
   - mcp__storage__update_entry
   - mcp__storage__delete_entry
+mcpServers:
+  # Layer 2: this role's own retrieval server, started when the subagent starts.
+  # AGENT_ROLE is what the server's allow-list checks (mcp/retrieval/allow-list.json).
+  - retrieval:
+      type: stdio
+      command: python3
+      args: ["/workspace/mcp/retrieval/server.py", "--stdio"]
+      env:
+        AGENT_ROLE: fence-reviewer
+        RETRIEVAL_REFERENCE_DIR: /workspace/.memory/reference/lessons
+        RETRIEVAL_MAX_CEILING: internal
+        RETRIEVAL_AUDIT_LOG: /workspace/logs/retrieval-audit-log.jsonl
 autonomy: high
-version: 1.0.1
+version: 1.0.2
 ---
 
 # Fence-reviewer

@@ -69,6 +69,7 @@ All three Module 3.2 duties use project `proj-lessons`. The curated corpus is `.
 | orchestrator (main session) | None | None | n/a | Routes and gates, it doesn't do content. Held by instruction, since Claude Code doesn't restrict the main session's tools. |
 | demo-verifier | None | None | n/a | The verdict comes only from `demo-suite.sh` output, cross-checked by `demo1-check.sh`. Its `tools:` list has no MCP tools. |
 | port-planner | None | None | n/a | Port specs cite the C source by file:line, not lessons, and the role is outside the Feature 1 team. Its `tools:` list has no MCP tools. |
+| trace-auditor | None | None | n/a | Audits the golden traces and manifest against git and the approved values the operator copies into the task. The operator launches it with `run-agent.sh`; the orchestrator does not route to it. A lesson is never audit evidence, and the role runs with memory omitted. Its `tools:` list has no MCP tools. |
 
 The subagent grants are enforced by each definition's `tools:` list, with the withheld storage and retrieval tools also listed under `disallowedTools`. No role gets a confidential ceiling.
 
@@ -81,7 +82,7 @@ The subagent grants are enforced by each definition's `tools:` list, with the wi
 - `Read` and `Edit` of `./.memory/reference/lessons/**`, `./.memory/storage.db*` (including the WAL files) and `./.memory/storage-audit.log`, plus `//memory/**` in case a server falls back to its default `/memory` paths.
 - `Bash(sqlite3 *)`.
 
-`Read` deny rules also cover Grep, Glob and the file commands Claude Code recognizes in Bash (`cat`, `head`, `tail` and so on). Bash deny rules are best-effort: a script such as `python -c` that opens the file itself isn't caught. The real guard is that the tester and demo-verifier are the only Bash subagents (the orchestrator uses Bash only for read-only git, by instruction), and their instructions forbid touching these paths. The audit log is denied to agents too. George reads it himself.
+`Read` deny rules also cover Grep, Glob and the file commands Claude Code recognizes in Bash (`cat`, `head`, `tail` and so on). Bash deny rules are best-effort: a script such as `python -c` that opens the file itself isn't caught. The real guard is that the tester, demo-verifier and trace-auditor are the only Bash subagents (the orchestrator uses Bash only for read-only git, by instruction), and their instructions forbid touching these paths. The audit log is denied to agents too. George reads it himself.
 
 **Network deviation.** The lesson runs agent containers on an `--internal` Docker network (`agent-internal`). That network also blocks the Claude API, so Claude Code can't work there. Agent sessions run on Docker's normal network instead. Both MCP servers bind to 127.0.0.1 inside the container with no published ports (no `-p`), so nothing outside the container can reach them. Builds and demo checks still run on `--network none`.
 

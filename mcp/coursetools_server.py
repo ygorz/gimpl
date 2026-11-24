@@ -53,16 +53,24 @@ def authorize(tool_name: str, role: str) -> None:
 
 
 # Lessons and storage are reached only through the retrieval and storage
-# MCP servers. No coursetools call may read, write or search them directly.
+# MCP servers, and skills only through Claude Code. No coursetools call may
+# read, write or search them directly.
 DENIED_PATHS = (
     ROOT / ".memory" / "reference" / "lessons",
     ROOT / ".memory" / "storage.db",
     ROOT / ".memory" / "storage.db-wal",
     ROOT / ".memory" / "storage.db-shm",
     ROOT / ".memory" / "storage-audit.log",
+    ROOT / "logs",
     ROOT / ".eval-artifacts",
     ROOT / "docs" / "holdout-task-set.md",
+    ROOT / ".claude" / "skills",
 )
+
+# Project skills load only through Claude Code: the main session's Skill tool
+# and each subagent's skills: preload (docs/governance-policy.md). No
+# coursetools call may read, write or search them as plain files.
+SKILLS_DIR = ROOT / ".claude" / "skills"
 
 
 def is_denied(candidate: Path) -> bool:
@@ -73,6 +81,11 @@ def safe_path(path: str) -> Path:
     candidate = (ROOT / path).resolve()
     if not str(candidate).startswith(str(ROOT)):
         raise ValueError(f"Path escapes the project root: {path}")
+    if candidate == SKILLS_DIR or SKILLS_DIR in candidate.parents:
+        raise PermissionError(
+            f"Denied: {path} is a project skill. Skills load only through the Skill tool "
+            "or an agent's skills: preload, never as plain files."
+        )
     if is_denied(candidate):
         raise PermissionError(
             f"Denied: {path} is reached only through the storage or retrieval server."

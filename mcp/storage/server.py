@@ -11,11 +11,21 @@ from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 
 DB_PATH = os.getenv("STORAGE_DB_PATH", "/memory/storage.db")
-AUDIT_PATH = os.getenv("STORAGE_AUDIT_PATH", "/memory/storage-audit.log")
+AUDIT_PATH = os.getenv("STORAGE_AUDIT_PATH", "/workspace/logs/storage-audit-log.jsonl")
+
+# Module 4 Layer 2: the caller's role comes from the environment of the
+# process that started this server (the agent file's mcpServers entry, or
+# scripts/run-agent.sh), never from a tool argument. Empty or unknown roles
+# are denied (fail closed). The allow-list mirrors docs/governance-policy.md.
+CALLING_ROLE = os.environ.get("AGENT_ROLE", "")
+ALLOW_LIST_PATH = Path(__file__).parent / "allow-list.json"
+ALLOW_LIST: dict[str, list[str]] = json.loads(ALLOW_LIST_PATH.read_text(encoding="utf-8"))
+POLICY_REFERENCE = "docs/governance-policy.md"
 
 ALLOWED_CLASSIFICATIONS = {"public", "internal", "confidential", "secret"}
 WRITE_CLASSIFICATIONS = {"public", "internal"}
@@ -60,25 +70,53 @@ def get_db() -> sqlite3.Connection:
     return conn
 
 
+def write_audit(record: dict[str, Any]) -> None:
+    """Append one JSON line to the audit log. Agents have no tool that edits it."""
+    ensure_parent(AUDIT_PATH)
+    with open(AUDIT_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, sort_keys=True) + "\n")
+
+
 def audit(
     operation: str,
     project_id: str,
     entry_id: str | None,
     classification: str | None,
-    calling_role: str | None,
+    claimed_role: str | None,
 ) -> None:
-    """Append one JSON audit record. Agents have no tool that edits this file."""
-    ensure_parent(AUDIT_PATH)
-    record: dict[str, Any] = {
+    """Record a successful operation. calling_role is the authorized role from
+    AGENT_ROLE; claimed_role is whatever the caller passed as an argument."""
+    write_audit({
         "timestamp": utc_now(),
+        "event": "storage_" + operation,
+        "outcome": "success",
         "operation": operation,
         "project_id": project_id,
         "entry_id": entry_id,
         "classification": classification,
-        "calling_role": calling_role or "unknown",
-    }
-    with open(AUDIT_PATH, "a", encoding="utf-8") as f:
-        f.write(json.dumps(record, sort_keys=True) + "\n")
+        "calling_role": CALLING_ROLE,
+        "claimed_role": claimed_role or "unknown",
+    })
+
+
+def _authorize(operation: str, claimed_role: str | None = None) -> None:
+    """First statement of every tool: refuse and log a role the allow-list
+    does not grant this operation."""
+    if CALLING_ROLE and CALLING_ROLE in ALLOW_LIST.get(operation, []):
+        return
+    write_audit({
+        "timestamp": utc_now(),
+        "event": "authorization_denied",
+        "outcome": "authorization_denied",
+        "operation": operation,
+        "role": CALLING_ROLE or "(unset)",
+        "claimed_role": claimed_role or "unknown",
+        "policy_reference": POLICY_REFERENCE,
+    })
+    raise ToolError(
+        f"authorization_denied: role '{CALLING_ROLE or '(unset)'}' may not call "
+        f"'{operation}'. See {POLICY_REFERENCE}."
+    )
 
 
 def validate_project_id(project_id: str) -> None:
@@ -119,6 +157,7 @@ def write_entry(
     calling_role: str = "unknown",
 ) -> dict:
     """Write a new entry to the store. Requires a valid classification tag."""
+    _authorize("write_entry", calling_role)
     validate_project_id(project_id)
     validate_nonempty(entry_type, "entry_type")
     validate_nonempty(title, "title")
@@ -145,6 +184,7 @@ def write_entry(
 @mcp.tool
 def read_entry(project_id: str, entry_id: str) -> dict:
     """Read a single entry by ID, scoped to its project."""
+    _authorize("read_entry")
     validate_project_id(project_id)
     validate_nonempty(entry_id, "entry_id")
 
@@ -162,6 +202,7 @@ def read_entry(project_id: str, entry_id: str) -> dict:
 @mcp.tool
 def list_entries(project_id: str, entry_type: str | None = None) -> list[dict]:
     """List entries for a project. Metadata only; never returns full content."""
+    _authorize("list_entries")
     validate_project_id(project_id)
 
     conn = get_db()
@@ -195,6 +236,7 @@ def update_entry(
     calling_role: str = "unknown",
 ) -> dict:
     """Update the content of an existing entry. Classification is preserved."""
+    _authorize("update_entry", calling_role)
     validate_project_id(project_id)
     validate_nonempty(entry_id, "entry_id")
     validate_nonempty(content, "content")
@@ -226,6 +268,7 @@ def delete_entry(
     calling_role: str = "unknown",
 ) -> dict:
     """Soft-delete an entry. Marks deleted; does not remove backend evidence."""
+    _authorize("delete_entry", calling_role)
     validate_project_id(project_id)
     validate_nonempty(entry_id, "entry_id")
 
@@ -252,7 +295,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Persistent storage MCP server")
     parser.add_argument("--port", type=int, default=8001)
     parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--stdio", action="store_true",
+                        help="serve over stdio (agent mcpServers entries, MCP Inspector)")
     args = parser.parse_args()
+
+    if args.stdio:
+        mcp.run()
+        raise SystemExit(0)
 
     import uvicorn
     app = mcp.http_app(

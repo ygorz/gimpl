@@ -140,6 +140,7 @@ FORBIDDEN_BY_ROLE = {
 # the holdout set), and paths no agent may write (golden traces: coding
 # standard 4, George only).
 NEVER_READ_PATHS = (".memory/storage.db", ".memory/storage-audit.log",
+                    "logs/storage-audit-log.jsonl", "logs/retrieval-audit-log.jsonl",
                     ".memory/reference/lessons", ".eval-artifacts",
                     "docs/holdout-task-set.md")
 NEVER_WRITE_PATHS = (GOLDEN_DIR, ".claude/settings")
@@ -346,7 +347,11 @@ def load_run(run_dir):
     session = read_jsonl(os.path.join(run_dir, "session.jsonl"))
     if not any(r.get("type") == "assistant" for r in session):
         raise MalformedRun(f"{run_dir}/session.jsonl has no assistant turns")
-    audit = read_jsonl(os.path.join(run_dir, "audit.jsonl"))
+    # Since Module 4 the storage audit also records authorization denials.
+    # Checks below count operations that ran; denials are kept separately.
+    audit_all = read_jsonl(os.path.join(run_dir, "audit.jsonl"))
+    audit = [e for e in audit_all if e.get("outcome", "success") == "success"]
+    audit_denied = [e for e in audit_all if e.get("outcome") == "authorization_denied"]
 
     subfiles = {}
     for path in sorted(glob.glob(os.path.join(run_dir, "subagents", "**", "agent-*.jsonl"),
@@ -396,7 +401,8 @@ def load_run(run_dir):
             summaries[p] = f.read()
 
     return {"dir": run_dir, "meta": meta, "before": before, "after": after,
-            "session": session, "audit": audit, "main_calls": main_calls,
+            "session": session, "audit": audit, "audit_denied": audit_denied,
+            "main_calls": main_calls,
             "invocations": invocations, "summaries": summaries,
             "all_calls": main_calls + [c for i in invocations for c in i["calls"]]}
 

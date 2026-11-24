@@ -12,7 +12,11 @@
       "Bash(sqlite3 *)",
       "Read(./.eval-artifacts/**)",
       "Edit(./.eval-artifacts/**)",
-      "Read(./docs/holdout-task-set.md)"
+      "Read(./docs/holdout-task-set.md)",
+      "Read(./logs/**)",
+      "Edit(./logs/**)",
+      "Read(./.claude/skills/**)",
+      "Edit(./.claude/skills/**)"
     ]
   },
   "hooks": {
@@ -32,6 +36,26 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/orchestrator-bash-guard.py",
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|mcp__coursetools__file_write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/decision-write-guard.py",
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/skill-file-guard.py",
             "onFailure": "block"
           }
         ]
