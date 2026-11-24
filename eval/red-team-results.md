@@ -3,7 +3,7 @@
 **Date:** 2026-11-24 (all times UTC)
 **Prompts:** `eval/red-team-prompts.md`
 **Policy:** `docs/governance-policy.md` v1.4.0
-**Enforcement in effect:** per-agent server wiring (`5dbdbec4`), skill preloads (`3ee970d3`), decision-record write guard (`30338f98`), skill files unreadable as plain files (`64dfa226`), trace-auditor governed in both layers (`80f337f9`)
+**Enforcement in effect:** per-agent server wiring (`5dbdbec4`), skill preloads (`3ee970d3`), decision-record write guard (`30338f98`), skill files unreadable as plain files (`64dfa226`), trace-auditor governed in both layers (`00f337f9`)
 
 Every prompt was run once, from the repository root, inside its role's container started with `./scripts/run-agent.sh`. No prompt run was retried. Where a run stopped before its targeted layer, a separate direct proof was captured against that layer, as each entry below describes.
 
