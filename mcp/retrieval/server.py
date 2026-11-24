@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sqlite3
 import sys
 from pathlib import Path
-from typing import Callable
+from datetime import datetime, timezone
+from typing import Any, Callable
 
 import sqlite_vec
 from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
 from sentence_transformers import SentenceTransformer
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
@@ -30,9 +33,52 @@ FALLBACK_CLASSIFICATION = "secret"
 MAX_CEILING = os.getenv("RETRIEVAL_MAX_CEILING", "internal")
 if MAX_CEILING not in CLASSIFICATION_ORDER:
     raise SystemExit(f"RETRIEVAL_MAX_CEILING must be one of {CLASSIFICATION_ORDER}")
+
+# Module 4 Layer 2: role from the environment of the process that started this
+# server, never from a tool argument. Empty or unknown roles are denied (fail
+# closed). Each granted role has its own ceiling in allow-list.json; the
+# effective ceiling is the lowest of the request, the role's ceiling and
+# RETRIEVAL_MAX_CEILING.
+CALLING_ROLE = os.environ.get("AGENT_ROLE", "")
+ALLOW_LIST_PATH = Path(__file__).parent / "allow-list.json"
+ALLOW_LIST: dict[str, dict[str, Any]] = json.loads(ALLOW_LIST_PATH.read_text(encoding="utf-8"))
+AUDIT_PATH = os.getenv("RETRIEVAL_AUDIT_LOG", "/workspace/logs/retrieval-audit-log.jsonl")
+POLICY_REFERENCE = "docs/governance-policy.md"
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
 mcp = FastMCP("retrieval")
+
+
+def write_audit(event: str, **fields: Any) -> None:
+    """Append one JSON line to the retrieval audit log."""
+    Path(AUDIT_PATH).parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "event": event,
+        "operation": "retrieve",
+        "role": CALLING_ROLE or "(unset)",
+        **fields,
+    }
+    with open(AUDIT_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, sort_keys=True) + "\n")
+
+
+def _authorize(operation: str) -> str:
+    """First statement of every tool. Returns the role's ceiling, or refuses
+    and logs a role the allow-list does not grant."""
+    grant = ALLOW_LIST.get(operation, {}).get(CALLING_ROLE) if CALLING_ROLE else None
+    if grant and grant.get("granted") is True:
+        return grant["classification_ceiling"]
+    write_audit(
+        "authorization_denied",
+        outcome="authorization_denied",
+        reason=(grant or {}).get("denial_reason", "role not on the allow-list"),
+        policy_reference=POLICY_REFERENCE,
+    )
+    raise ToolError(
+        f"authorization_denied: role '{CALLING_ROLE or '(unset)'}' may not call "
+        f"'{operation}'. See {POLICY_REFERENCE}."
+    )
 
 
 def validate_project_id(project_id: str) -> None:
@@ -191,6 +237,7 @@ def build_index(conn: sqlite3.Connection, chunker: Callable[[str], list[str]]) -
                 f"WARNING: {path.name} has no valid classification; "
                 f"indexing as '{FALLBACK_CLASSIFICATION}' "
                 "(hidden under normal ceilings). Tag it and re-index.",
+                file=sys.stderr,
                 flush=True,
             )
             classification = FALLBACK_CLASSIFICATION
@@ -216,7 +263,7 @@ def build_index(conn: sqlite3.Connection, chunker: Callable[[str], list[str]]) -
 
     conn.commit()
     count = next_id - 1
-    print(f"Indexed {count} chunks from {REFERENCE_DIR}", flush=True)
+    print(f"Indexed {count} chunks from {REFERENCE_DIR}", file=sys.stderr, flush=True)
     return count
 
 
@@ -234,6 +281,7 @@ def keyword_search(
     top_k: int,
     ceiling_rank: int,
     filters: dict,
+    withheld: list[dict],
 ) -> list[dict]:
     query_expr = fts_query(query)
     if not query_expr:
@@ -251,9 +299,12 @@ def keyword_search(
     for row in rows:
         if row["project"] != project_id:
             continue
-        if rank(row["classification"]) > ceiling_rank:
-            continue
         if "doc_type" in filters and row["doc_type"] != filters["doc_type"]:
+            continue
+        if rank(row["classification"]) > ceiling_rank:
+            withheld.append(dict(source_document=row["source_document"],
+                                 chunk_index=row["chunk_index"],
+                                 classification=row["classification"]))
             continue
         results.append(
             {
@@ -279,6 +330,7 @@ def retrieve(
     metadata_filters: dict | None = None,
 ) -> list[dict]:
     """Search the reference corpus by meaning within project and classification bounds."""
+    role_ceiling = _authorize("retrieve")
     if not isinstance(query, str) or not query.strip():
         raise ValueError("query must be a non-empty string")
     validate_project_id(project_id)
@@ -288,11 +340,12 @@ def retrieve(
 
     filters = metadata_filters or {}
     validate_metadata_filters(filters)
-    ceiling_rank = min(rank(classification_ceiling), rank(MAX_CEILING))
+    ceiling_rank = min(rank(classification_ceiling), rank(role_ceiling), rank(MAX_CEILING))
+    effective_ceiling = CLASSIFICATION_ORDER[ceiling_rank]
     if rank(classification_ceiling) > ceiling_rank:
         print(
             f"CLAMP: requested ceiling '{classification_ceiling}' lowered to "
-            f"'{MAX_CEILING}' (RETRIEVAL_MAX_CEILING)",
+            f"'{effective_ceiling}' (role ceiling / RETRIEVAL_MAX_CEILING)",
             file=sys.stderr,
             flush=True,
         )
@@ -312,15 +365,19 @@ def retrieve(
     ).fetchall()
 
     results: list[dict] = []
+    withheld: list[dict] = []
     for row in candidates:
         if row["project"] != project_id:
-            continue
-        if rank(row["classification"]) > ceiling_rank:
             continue
         if "doc_type" in filters and row["doc_type"] != filters["doc_type"]:
             continue
         score = round(1.0 - float(row["distance"]), 3)
         if score < SIMILARITY_THRESHOLD:
+            continue
+        if rank(row["classification"]) > ceiling_rank:
+            withheld.append(dict(source_document=row["source_document"],
+                                 chunk_index=row["chunk_index"],
+                                 classification=row["classification"]))
             continue
         results.append(
             {
@@ -335,10 +392,17 @@ def retrieve(
         if len(results) == top_k:
             break
 
-    if results:
-        return results
+    if not results:
+        results = keyword_search(query, project_id, top_k, ceiling_rank, filters, withheld)
 
-    return keyword_search(query, project_id, top_k, ceiling_rank, filters)
+    # One audit line per document held back by the ceiling, then the call itself.
+    for item in withheld:
+        write_audit("classification_withheld", outcome="withheld",
+                    ceiling=effective_ceiling, **item)
+    write_audit("retrieve_ok", outcome="success", project_id=project_id,
+                ceiling=effective_ceiling, returned=len(results),
+                withheld=len(withheld))
+    return results
 
 
 model: SentenceTransformer
@@ -352,6 +416,8 @@ if __name__ == "__main__":
         "--chunking", choices=["paragraph", "semantic"], default="paragraph"
     )
     parser.add_argument("--boundary-threshold", type=float, default=0.75)
+    parser.add_argument("--stdio", action="store_true",
+                        help="serve over stdio (agent mcpServers entries, MCP Inspector)")
     args = parser.parse_args()
 
     model = SentenceTransformer(EMBEDDING_MODEL)
@@ -364,6 +430,10 @@ if __name__ == "__main__":
         chunker = chunk_paragraphs
 
     build_index(conn, chunker)
+
+    if args.stdio:
+        mcp.run()
+        raise SystemExit(0)
 
     import uvicorn
     app = mcp.http_app(
