@@ -118,6 +118,18 @@ def test_main_session_with_agent_type_only_is_still_main():
     assert hook(bash("cat .memory/SCOPE.md", agent_type="orchestrator"))[0] == 2
 
 
+def test_session_started_as_another_agent_is_not_limited():
+    # `claude --agent trace-auditor` is that role, not the orchestrator: the
+    # same main-session test as decision-write-guard.py and skill-file-guard.py.
+    for agent_type, cmd in (("trace-auditor", "sha256sum tests/demos/heretic/golden/demo1.tics"),
+                            ("trace-auditor", "wc -l tests/demos/heretic/golden/demo1.tics"),
+                            ("tester", "bash scripts/demo-suite.sh")):
+        assert hook(bash(cmd, agent_type=agent_type))[0] == 0
+    assert hook(tool("Read", {"file_path": "/workspace/tests/demos/heretic/manifest"},
+                     agent_type="trace-auditor"))[0] == 0
+    assert hook(bash("cat .memory/SCOPE.md", agent_type=""))[0] == 2
+
+
 def test_tools_outside_the_guard_pass():
     for name, inp in (("mcp__coursetools__file_read", {"role": "orchestrator", "path": ".claude/agents/planner.md"}),
                       ("mcp__coursetools__file_read", {"role": "orchestrator", "path": "docs/memory-architecture.md"}),

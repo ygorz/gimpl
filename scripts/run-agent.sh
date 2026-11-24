@@ -47,10 +47,16 @@ case "$ROLE" in
     WORKSPACE_MODE="rw"
     MOUNT_MEMORY=0
     ;;
+  trace-auditor)
+    # Policy: workspace read-only, memory omitted. The same as the deny-first
+    # default, stated here so the role is governed on purpose, not by omission.
+    WORKSPACE_MODE="ro"
+    MOUNT_MEMORY=0
+    ;;
   *)
     echo "Unknown role: $ROLE" >&2
     echo "This role has no policy entry, so it cannot be launched." >&2
-    echo "Roles: orchestrator planner implementer tester fence-reviewer demo-verifier port-planner" >&2
+    echo "Roles: orchestrator planner implementer tester fence-reviewer demo-verifier port-planner trace-auditor" >&2
     exit 1
     ;;
 esac

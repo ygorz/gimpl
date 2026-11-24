@@ -15,8 +15,13 @@ enforced here too (commit C).
 
 - Subagents are never limited here: Claude Code adds `agent_id` to the hook
   input only when the call comes from a subagent (docs: "Common input
-  fields"). The tester and demo-verifier keep their Bash exactly as before;
+  fields"). The tester, demo-verifier and trace-auditor keep their Bash;
   their own tools: lists and permissions still apply.
+- A session started as another agent (`claude --agent tester`, `--agent
+  trace-auditor`) carries `agent_type` with no `agent_id`. It is that role,
+  not the orchestrator, so it is not limited here either. This is the same
+  main-session test decision-write-guard.py and skill-file-guard.py use
+  (is_main_session). `--agent orchestrator` is still the main session.
 - Main session: allowed only if every chained part (&&, ||, ;, newline) is
   git status / diff / log (optionally after `cd <dir>`), piped at most into
   head/tail/wc/sort/uniq/grep reading stdin only. This is the same rule as
@@ -155,6 +160,13 @@ def block_file(detail):
     sys.exit(2)
 
 
+def is_main_session(data):
+    """The main session (the orchestrator), not a subagent or another --agent."""
+    if data.get("agent_id"):
+        return False
+    return data.get("agent_type") in (None, "", "orchestrator")
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -166,7 +178,7 @@ def main():
     tool = data.get("tool_name")
     if tool != "Bash" and tool not in FILE_TOOLS:
         sys.exit(0)
-    if data.get("agent_id"):          # a subagent: its own grant applies, not this rule
+    if not is_main_session(data):     # a subagent or another --agent: its own grant applies
         sys.exit(0)
     if tool in FILE_TOOLS:
         inp = data.get("tool_input")

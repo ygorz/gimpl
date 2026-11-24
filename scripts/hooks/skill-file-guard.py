@@ -15,8 +15,8 @@ DEV-02-r2, where blocking one tool moved the reads to another
 - coursetools file_read, file_write and codebase_search: `.claude/skills`
   is in DENIED_PATHS in mcp/coursetools_server.py.
 
-This hook covers Bash, which only the tester and demo-verifier have as
-subagents. It blocks a subagent's Bash command that names `.claude/skills`
+This hook covers Bash, which only the tester, demo-verifier and
+trace-auditor have as subagents. It blocks a subagent's Bash command that names `.claude/skills`
 or a `SKILL.md` file. It is a string check: a command that reaches the files
 without naming them (a glob such as `.claude/sk*`, a variable, `find`) is
 not caught, so it is a tripwire, not a boundary. A skill file holds

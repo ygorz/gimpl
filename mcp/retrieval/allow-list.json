@@ -6,6 +6,7 @@
     "implementer": {"granted": false, "denial_reason": "the approved plan already cites the relevant lessons"},
     "tester": {"granted": false, "denial_reason": "a lesson is never test evidence"},
     "demo-verifier": {"granted": false, "denial_reason": "a lesson is never verification evidence"},
-    "port-planner": {"granted": false, "denial_reason": "port specs cite the C source, not lessons"}
+    "port-planner": {"granted": false, "denial_reason": "port specs cite the C source, not lessons"},
+    "trace-auditor": {"granted": false, "denial_reason": "a lesson is never audit evidence, and the role runs with memory omitted"}
   }
 }

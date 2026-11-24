@@ -136,7 +136,7 @@ def audit_lines(tmp_path):
     "find . -name skill.md -exec cat {} +",
     "head -50 /workspace/.claude/skills/summarize-session/SKILL.md",
 ])
-@pytest.mark.parametrize("agent", ["tester", "demo-verifier"])
+@pytest.mark.parametrize("agent", ["tester", "demo-verifier", "trace-auditor"])
 def test_subagent_bash_naming_a_skill_file_is_blocked_and_logged(tmp_path, command, agent):
     r = bash(tmp_path, command, agent, "a1")
     assert r.returncode == 2 and MARKER in r.stderr
