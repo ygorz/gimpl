@@ -20,36 +20,39 @@ The classification names three edge cases the agent handles by judgment today, a
 Replace the demo-verifier agent with `scripts/verify_demos_deterministic.py`, which reads a request file named by `--input`, runs the same two scripts, writes the same report content as structured JSON to the file named by `--output`, exits 0 for PASS, 1 for FAIL and 2 for BLOCKED, and calls no language model.
 
 ## Alternatives considered
-- **Keep the agentic step.** Rejected. Iteration Log Runs 1 and 2 cost $0.0782 and $0.0814 with cycle times of 1:00 and 1:04, and REG-01 failed the cost budget on both runs (57,861 and 57,626 tokens against 51,200). The verdict on every logged run came from script output the agent copied. The one quality problem it had, Run 1 paraphrasing the sha256 line and `git status`, was a copying problem, which code removes by construction.
+- **Keep the agentic step.** Rejected. The before-conversion entry in Calibration Log Entry 2 (`f454c21c`) shows the agent averaged 29.9 s and $0.1147 (9,168 tokens) per run across three runs on "Check the demos.", with verdict PASS each time. Earlier runs agree: Iteration Log Runs 1 and 2 cost $0.0782 and $0.0814 at 1:00 and 1:04, and REG-01 failed the cost budget on both runs (57,861 and 57,626 tokens against 51,200). The verdict on every run came from script output the agent copied, and the one quality problem it had, Run 1 paraphrasing the sha256 line and `git status`, was a copying problem, which code removes by construction.
 - **Shrink the agent: a tighter prompt or a smaller model.** Rejected. It would lower the token count, but it keeps model latency, keeps the wording variance that caused Run 1's Evidence score of 3/4, and keeps the governance overhead: a policy entry, a `run-agent.sh` branch, retrieval allow-list entries, harness grant maps and Bash in a read-write container. A structural check needs none of these.
 - **Raise the REG-01 cost budget.** Rejected. It turns the `cost` check green without changing what the step costs, and it leaves the governance overhead in place.
 - **Fold the check into the tester.** Rejected. The tester runs only inside the team loop after an implementer, so a standalone "Check the demos." would need a whole team run. It would also leave an agent in charge of a decision two scripts already make. The routing map deferred this option for the same reason.
-- **Convert to deterministic code.** Preferred. The script is expected to take only as long as the demo replay itself, cost zero tokens, give the same decision on every run, and be readable in one file. Before it replaces the agent, it must pass every deterministic check the agent passed, and it must have unit tests for the three edge cases above.
+- **Convert to deterministic code.** Preferred, pending integration. The after-conversion entry (`cd08730a`) shows `scripts/verify_demos_deterministic.py` averaged 7.2 s at $0 token cost across three runs on the same input, gave the same `decision` object on all three (checked with `diff`: only the `timed` lines' realtics differ, which are timing noise), and gave the same verdict as the agent, PASS. Every check the agent's output passed on this input also passed: the verdict, the PASS lines quoted exactly, and a tree left as it was found. The Evidence and Judgment rubric dimensions score written prose and do not apply to the structured output, so they are marked not applicable. This ADR stays Proposed until the script is integrated into the running workflow and the end-to-end regression check passes.
 
 ## Consequences
-Expected benefits: zero token cost, cycle time close to the demo replay time, the same decision on every run, an output a reviewer can check field by field, and one less governed agent role with Bash.
+Measured benefits so far (Calibration Log Entry 2): cycle time fell from 29.9 s to 7.2 s, token cost fell from $0.1147 per run to zero, the verdict and decision fields no longer vary between runs, and review time fell from 73 s to 48 s. Integration will also retire one governed role with Bash in a read-write container.
 
 Known trade-offs:
 - The script cannot explain beyond its rules. Run 2's agent read `src/heretic/g_game.c:2190` to explain exit 255. The script states the fixed meaning from decision-006 and nothing more.
 - The agent's "Anything unexpected" line could notice things nobody wrote a rule for. The script reports only what its rules check, plus every output line verbatim. Output it does not recognize gives BLOCKED with the lines quoted, never a guess.
 - If `demo-suite.sh` or `demo1-check.sh` change their output lines, the script's parser must change in the same commit.
 
-To watch before integration: the measured latency, cost and decision repeatability match these expectations, and every deterministic check the agent passed still passes. To accept: the conversion is integrated as one commit that also retires the agent's governance artifacts, and the end-to-end regression check passes with no new failures.
+To watch: if a BLOCKED for unrecognized output appears in normal use, the scripts' output changed, and the fix is the parser, in code, before considering a return to the agent.
 
-Rollback: the integration will be a single commit, so one `git revert` restores the agent version if the script gives a wrong result in the running workflow.
+Acceptance condition: keep this ADR at Proposed until the conversion is wired into the running workflow in one commit that also retires the agent's governance artifacts, and the end-to-end regression check passes with no new failures. Rollback: the integration will be a single commit, so one `git revert` restores the agent version if the script gives a wrong result in the running workflow.
 
 ## Evidence
-Expected, not yet measured (the script does not exist yet):
-- Latency: roughly the demo replay time, against the agent's 1:00 and 1:04.
-- Cost: 0 tokens.
-- Predictability: the same decision fields on three runs of one input.
-- Audit clarity: one readable script and a JSON result, against a transcript.
-- Quality: every deterministic check the agent passed still passes.
+Expected at Proposed, now measured (Calibration Log Entry 2, before `f454c21c` and after `cd08730a`):
 
-Evidenced so far (logged before this ADR):
+| Measurement | Expected at Proposed | Measured: agent | Measured: script |
+|---|---|---|---|
+| Latency | roughly the demo replay time | 29.9 s | 7.2 s |
+| Cost | 0 tokens | $0.1147, 9,168 tokens | $0, 0 tokens |
+| Predictability | the same decision on three runs | verdict same: yes; text same: no | decision same: yes |
+| Audit clarity | one readable script and a JSON result | definition, policy entry and transcript | one script, 277 lines, and named JSON fields |
+| Quality | every check the agent passed still passes | verdict PASS, quoted exactly 3/3 | verdict PASS, quoted exactly 3/3 |
+
+Implementation and tests: `8bd4e24c` (`scripts/verify_demos_deterministic.py`, `eval/test_deterministic_step.py`: 19 passed in 0.16s, covering the three edge cases).
+
+Logged before this ADR:
 - `docs/agents/demo-verifier-iteration-log.md`: Run 1 (15/16, $0.0782, 1:00) and Run 2 (16/16, $0.0814, 1:04).
 - `docs/iteration-log.md`, "Feature 1 Task 8": the v0.2.0 verification run, PASS.
 - `docs/calibration-log.md`: REG-01-r1 at `4d53dc40` and REG-01-r2 at `432e6797`, demos PASS at 4227 gametics, `cost` FAIL on both.
 - `docs/step-classification.md`: the four-signal assessment and the three edge cases.
-
-The measured comparison is added after the before-and-after measurement.
