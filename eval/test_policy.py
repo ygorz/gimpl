@@ -313,6 +313,41 @@ def test_roles_agree_across_artifacts():
         assert not unknown, f"storage allow-list '{op}' names roles with no policy entry: {sorted(unknown)}"
 
 
+CONVERSION_HISTORY = "## Deterministic conversion history"
+HARNESS = os.path.join(ROOT, "eval", "test_deterministic.py")
+COURSETOOLS_ALLOW = os.path.join(ROOT, "mcp", "roles.allowlist.json")
+ROUTING_MAP = os.path.join(ROOT, "docs", "routing-and-tool-grant-map.md")
+
+
+def retired_roles():
+    """{role: record path} from the policy's Deterministic conversion history."""
+    if CONVERSION_HISTORY not in POLICY_TEXT:
+        return {}
+    return {r[0].strip("`"): r[3].strip("`") for r in _table_rows(POLICY_TEXT, CONVERSION_HISTORY) if len(r) >= 4}
+
+
+def test_retired_roles_leave_no_governance_artifacts():
+    """A role converted to deterministic code keeps no policy entry, agent
+    file, run-agent.sh branch, allow-list entry, harness grant or routing-map
+    grant row, and its conversion record exists. A leftover artifact would
+    describe access the system no longer grants (Lesson 4.3)."""
+    harness = _load_script(HARNESS, "gimpl_harness_for_policy")
+    coursetools = json.loads(_read(COURSETOOLS_ALLOW))
+    routing = _read(ROUTING_MAP)
+    for role, record in retired_roles().items():
+        assert role not in POLICY_ROLES, f"retired role {role} still has a policy entry"
+        assert role not in agent_files(), f"retired role {role} still has .claude/agents/{role}.md"
+        assert role not in CASE_BRANCHES and role not in CASE_LISTED, f"run-agent.sh still launches {role}"
+        for name, allow in (("storage", STORAGE_ALLOW), ("retrieval", RETRIEVAL_ALLOW), ("coursetools", coursetools)):
+            for op, grants in allow.items():
+                assert role not in grants, f"{name} allow-list '{op}' still names retired role {role}"
+        assert role not in harness.EXPECTED_GRANTS, f"eval/test_deterministic.py EXPECTED_GRANTS still has {role}"
+        assert role not in harness.FORBIDDEN_BY_ROLE, f"eval/test_deterministic.py FORBIDDEN_BY_ROLE still has {role}"
+        assert not re.search(r"^\| " + re.escape(role) + r" \|", routing, re.M), (
+            f"docs/routing-and-tool-grant-map.md still has a grant row for {role}")
+        assert os.path.isfile(os.path.join(ROOT, record)), f"{role}: conversion record {record} is missing"
+
+
 @pytest.mark.parametrize("role", ROLES)
 def test_agent_file_matches_policy_entry(role):
     """The policy entry points at the agent file, and the file's name: field
@@ -708,6 +743,8 @@ def test_classifier_flags_cover_the_enforcement_files():
     enforcement = [POLICY, SETTINGS, MCP_JSON, RUN_AGENT, *SERVERS.values(), *ALLOW_LISTS.values(),
                    os.path.join(AGENTS_DIR, "planner.md"), os.path.join(SKILLS_DIR, "x", "SKILL.md"),
                    os.path.join(ROOT, "scripts", "hooks", "orchestrator-bash-guard.py"),
+                   os.path.join(ROOT, "scripts", "verify_demos_deterministic.py"),
+                   os.path.join(ROOT, "eval", "test_deterministic_step.py"),
                    os.path.abspath(__file__)]
     for path in enforcement:
         rel = os.path.relpath(path, ROOT).replace(os.sep, "/")

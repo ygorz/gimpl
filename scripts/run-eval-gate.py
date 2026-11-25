@@ -9,9 +9,11 @@ the job blocks the merge.
     python3 scripts/run-eval-gate.py --reports ci-artifacts --not-triggered
 
 What runs (inside the gimpl image, repository mounted read-only):
-1. pytest eval/tests: unit tests for the deterministic checks, the rubric
-   suite's gate and the PreToolUse guard hooks. The full pytest report is
-   saved as eval-tests-report.json.
+1. pytest eval/tests eval/test_deterministic_step.py: unit tests for the
+   deterministic checks, the rubric suite's gate, the PreToolUse guard hooks
+   and the deterministic demo verifier that replaced the demo-verifier agent
+   (scripts/verify_demos_deterministic.py, ADR-001). The full pytest report
+   is saved as eval-tests-report.json.
 2. eval/test_deterministic.py on each committed fixture run in
    eval/tests/fixtures/. The valid run must pass (exit 0); each broken run
    must fail (exit 1). A broken run that passes means a check stopped
@@ -67,9 +69,13 @@ def last_line(text: str) -> str:
     return lines[-1] if lines else ""
 
 
+# Unit-test suites the gate runs in one pytest call.
+PYTEST_TARGETS = ["eval/tests", "eval/test_deterministic_step.py"]
+
+
 def run_pytest(reports: Path) -> dict:
     report_file = reports / "eval-tests-report.json"
-    cmd = [sys.executable, "-m", "pytest", "eval/tests", "-q",
+    cmd = [sys.executable, "-m", "pytest", *PYTEST_TARGETS, "-q",
            "-p", "no:cacheprovider",
            "--json-report", f"--json-report-file={report_file}"]
     proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
@@ -81,7 +87,7 @@ def run_pytest(reports: Path) -> dict:
     except (OSError, ValueError):
         pass
     return {
-        "command": "python3 -m pytest eval/tests -q -p no:cacheprovider",
+        "command": "python3 -m pytest " + " ".join(PYTEST_TARGETS) + " -q -p no:cacheprovider",
         "exit_code": proc.returncode,
         "passed": proc.returncode == 0,
         "summary": summary,

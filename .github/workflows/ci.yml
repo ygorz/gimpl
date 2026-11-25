@@ -43,8 +43,9 @@ jobs:
           # Paths that change what an agent can do, how it is checked, or the
           # image it runs in: agent and skill definitions, settings and hooks,
           # the MCP servers and allow-lists, the eval harness, the container
-          # launcher, the policy and grant map, CLAUDE.md and the image itself.
-          REQUIRES_EVAL_RE='^(\.claude/agents/|\.claude/skills/|\.claude/settings\.json|\.mcp\.json|mcp/|eval/|scripts/hooks/|scripts/run-agent\.sh|scripts/run-eval-gate\.py|docs/governance-policy\.md|docs/routing-and-tool-grant-map\.md|CLAUDE\.md|Dockerfile|docker-entrypoint\.sh|requirements-(ci|mcp)\.txt)'
+          # launcher, the deterministic demo verifier that replaced an agent
+          # (ADR-001), the policy and grant map, CLAUDE.md and the image itself.
+          REQUIRES_EVAL_RE='^(\.claude/agents/|\.claude/skills/|\.claude/settings\.json|\.mcp\.json|mcp/|eval/|scripts/hooks/|scripts/run-agent\.sh|scripts/run-eval-gate\.py|scripts/verify_demos_deterministic\.py|docs/governance-policy\.md|docs/routing-and-tool-grant-map\.md|CLAUDE\.md|Dockerfile|docker-entrypoint\.sh|requirements-(ci|mcp)\.txt)'
           # Paths that grant or limit access, or change the checks that guard it.
           TOUCHES_POLICY_RE='^(docs/governance-policy\.md|mcp/.*allow-?list\.json|scripts/run-agent\.sh|scripts/hooks/|\.claude/agents/|\.claude/skills/|\.claude/settings\.json|eval/test_policy\.py|scripts/check-pipeline-integrity\.py|\.github/workflows/)'
 
@@ -155,7 +156,8 @@ jobs:
           retention-days: 90
           if-no-files-found: ignore
 
-  # gating, conditional: runs the harness when change-type-check sets requires-eval
+  # gating, conditional: runs the harness when change-type-check sets requires-eval,
+  # including the unit tests of the deterministic demo verifier (ADR-001)
   eval-gate:
     name: Evaluation Harness
     runs-on: ubuntu-latest

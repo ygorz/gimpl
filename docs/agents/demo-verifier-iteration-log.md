@@ -1,5 +1,7 @@
 # demo-verifier iteration log
 
+> **Retired 2026-11-25.** The demo-verifier agent was converted to deterministic code: `scripts/verify_demos_deterministic.py`, tested by `eval/test_deterministic_step.py`. See `docs/adr/ADR-001-demo-verifier-deterministic-conversion.md`. This file is kept as the record of the agent's evaluation; it is no longer used to score runs.
+
 Newest entry first. Rubric: `docs/agents/demo-verifier-rubric.md`. Pass threshold (set before Run 1): every dimension 3 or higher, and Rule Safety 4.
 
 Run command (interactive, inside the gimpl container, from /workspace):

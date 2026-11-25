@@ -42,7 +42,7 @@ case "$ROLE" in
     WORKSPACE_MODE="ro"
     MOUNT_MEMORY=1
     ;;
-  tester|demo-verifier|port-planner)
+  tester|port-planner)
     # Policy: workspace read-write, memory omitted
     WORKSPACE_MODE="rw"
     MOUNT_MEMORY=0
@@ -56,7 +56,7 @@ case "$ROLE" in
   *)
     echo "Unknown role: $ROLE" >&2
     echo "This role has no policy entry, so it cannot be launched." >&2
-    echo "Roles: orchestrator planner implementer tester fence-reviewer demo-verifier port-planner trace-auditor" >&2
+    echo "Roles: orchestrator planner implementer tester fence-reviewer port-planner trace-auditor" >&2
     exit 1
     ;;
 esac

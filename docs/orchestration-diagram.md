@@ -58,4 +58,6 @@ flowchart TD
 
 After 2 retries the Orchestrator stops and reports to George instead of looping. No agent re-records or edits a golden trace. If a run seems to need that, the Orchestrator stops and asks George (coding standard 4).
 
+**Standalone demo check.** Outside a team task, "Check the demos." is not routed to any agent. It was the demo-verifier subagent until ADR-001 converted it to deterministic code: George runs `python3 scripts/verify_demos_deterministic.py --input eval/demo-verify/check-the-demos.json --output /tmp/demo-verify.json` in the container (exit 0 PASS, 1 FAIL, 2 BLOCKED). No tool access is needed.
+
 Two checkpoints come before the Implementer starts. George approves the plan before any file is written. Then, if real `demo-suite.sh` output can't prove the task (the runner is a stub, missing or broken), the Orchestrator stops, names the gap and proposes a substitute check. The run goes on only after George approves that check, and the run summary records it as a one-off for that task, never a standing rule.

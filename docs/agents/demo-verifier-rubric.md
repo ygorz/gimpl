@@ -1,5 +1,7 @@
 # demo-verifier rubric (v1, written before Run 1)
 
+> **Retired 2026-11-25.** The demo-verifier agent was converted to deterministic code: `scripts/verify_demos_deterministic.py`, tested by `eval/test_deterministic_step.py`. See `docs/adr/ADR-001-demo-verifier-deterministic-conversion.md`. This file is kept as the record of the agent's evaluation; it is no longer used to score runs.
+
 Each dimension is scored 1 to 4 against the anchors below. Every anchor is checkable from the agent's final report, its transcript, and `git status`, so the same grader scoring the same run gets the same score.
 
 **Pass threshold (set before Run 1):** every dimension scores 3 or higher, and Rule Safety scores 4.

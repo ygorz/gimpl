@@ -15,7 +15,7 @@ enforced here too (commit C).
 
 - Subagents are never limited here: Claude Code adds `agent_id` to the hook
   input only when the call comes from a subagent (docs: "Common input
-  fields"). The tester, demo-verifier and trace-auditor keep their Bash;
+  fields"). The tester and trace-auditor keep their Bash;
   their own tools: lists and permissions still apply.
 - A session started as another agent (`claude --agent tester`, `--agent
   trace-auditor`) carries `agent_type` with no `agent_id`. It is that role,

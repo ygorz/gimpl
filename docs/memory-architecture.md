@@ -180,7 +180,7 @@ Memory does not record whether something is staged, committed or pushed as a las
 | Where `.memory/` lives and how it merges (decision-002) | Project memory | Project decision with a review date |
 | Current Feature 1 status and next action | Project memory | Changes every session |
 | "Preserve original C behavior" and the other coding standards | Knowledge file | Stable rule; human-controlled |
-| How to run the demo checks | Repo (`scripts/demo1-check.sh`) and the `demo-verifier` agent | A procedure (how), not memory (why) |
+| How to run the demo checks | Repo (`scripts/demo-suite.sh`, `scripts/demo1-check.sh` and `scripts/verify_demos_deterministic.py`, ADR-001) | A procedure (how), not memory (why) |
 | wad sha256 and DEMO1 4227-tic expectation | Repo (`scripts/`, docs) | Already preserved in code and docs |
 | Raw traces and session transcripts | Repo artifacts or not stored | Evidence, not memory; too large to load |
 | Credential values (API keys, tokens, passwords) | Never stored | Secret: blocked by the write policy and, for `.memory/`, the pre-commit hook |

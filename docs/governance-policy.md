@@ -1,7 +1,7 @@
 # Agent Governance Policy
 
-Version: v1.4.0
-Last updated: 2026-11-24
+Version: v1.5.0
+Last updated: 2026-11-25
 Reviewed by: George Gorzhiyev
 
 ## Policy basis
@@ -30,13 +30,13 @@ To widen access, open a pull request with: the proposed grant, a concrete justif
 
 ## Roles covered
 
-This policy has one entry for each of the 8 roles in `.claude/agents/`. Course role names map to GIMPL roles as follows: Reviewer = fence-reviewer (review-only), Tester = tester, Implementer = implementer, Orchestrator = orchestrator. Project Manager is not used in GIMPL, because there is no ticket or PR-description work. GIMPL adds planner, port-planner, demo-verifier and trace-auditor.
+This policy has one entry for each of the 7 roles in `.claude/agents/`. Course role names map to GIMPL roles as follows: Reviewer = fence-reviewer (review-only), Tester = tester, Implementer = implementer, Orchestrator = orchestrator. Project Manager is not used in GIMPL, because there is no ticket or PR-description work. GIMPL adds planner, port-planner and trace-auditor. The demo-verifier role was retired when its step became deterministic code (see Deterministic conversion history).
 
 The storage server exposes five operations (`write_entry`, `read_entry`, `list_entries`, `update_entry`, `delete_entry`) and the retrieval server exposes one (`retrieve`). The project skills are `summarize-session` and `write-handoff`. Classification levels, lowest to highest, are public, internal, confidential and secret.
 
-Skill activation scope is enforced in the agent files. No subagent has the `Skill` tool, so no subagent can activate a skill on demand. Each subagent's `skills:` frontmatter preloads exactly the skills its entry permits, and no others. The orchestrator is the main session; it has the `Skill` tool and is permitted both project skills. Reading a `SKILL.md` as a plain file would get around this scope, the same displacement seen when blocking one tool moved reads to another (calibration-log.md, near-miss: displacement, DEV-02-r2), so that path is closed too. `.claude/settings.json` denies Read and Edit on `.claude/skills/`, and Claude Code applies the Read rule to Grep and Glob on a best-effort basis. The coursetools server lists `.claude/skills` in its denied paths, so `file_read`, `file_write` and `codebase_search` refuse it for every role. `scripts/hooks/skill-file-guard.py` refuses a subagent Bash command that names a skill file and logs the refusal to `logs/skill-guard-audit-log.jsonl`. Known limit: that Bash check matches the path as text, so a tester, demo-verifier or trace-auditor command that reaches the files without naming them, such as a glob, is not caught. A skill file holds instructions only, so such a read grants no tool or permission the role does not already have. Red-team prompt 7 tests the file-read case.
+Skill activation scope is enforced in the agent files. No subagent has the `Skill` tool, so no subagent can activate a skill on demand. Each subagent's `skills:` frontmatter preloads exactly the skills its entry permits, and no others. The orchestrator is the main session; it has the `Skill` tool and is permitted both project skills. Reading a `SKILL.md` as a plain file would get around this scope, the same displacement seen when blocking one tool moved reads to another (calibration-log.md, near-miss: displacement, DEV-02-r2), so that path is closed too. `.claude/settings.json` denies Read and Edit on `.claude/skills/`, and Claude Code applies the Read rule to Grep and Glob on a best-effort basis. The coursetools server lists `.claude/skills` in its denied paths, so `file_read`, `file_write` and `codebase_search` refuse it for every role. `scripts/hooks/skill-file-guard.py` refuses a subagent Bash command that names a skill file and logs the refusal to `logs/skill-guard-audit-log.jsonl`. Known limit: that Bash check matches the path as text, so a tester or trace-auditor command that reaches the files without naming them, such as a glob, is not caught. A skill file holds instructions only, so such a read grants no tool or permission the role does not already have. Red-team prompt 7 tests the file-read case.
 
-Decision records in `.memory/project/decisions/` are written only by the orchestrator, with the operator's approval. This is enforced by `scripts/hooks/decision-write-guard.py`, a PreToolUse hook registered in `.claude/settings.json` with `onFailure: "block"`. It refuses every Write, Edit, MultiEdit, NotebookEdit and coursetools `file_write` call into that folder that comes from a subagent, or from a session started as another agent. It identifies the caller from the agent fields Claude Code adds to the hook input, not from a role the agent claims, and it logs each refusal to `logs/decision-guard-audit-log.jsonl` (calibration-log.md, near-miss: HO-05). The hook does not inspect Bash. Under `scripts/run-agent.sh`, the only subagents with Bash (tester, demo-verifier and trace-auditor) run with memory omitted, and the main session's Bash is limited to read-only git, so the container layer covers that path.
+Decision records in `.memory/project/decisions/` are written only by the orchestrator, with the operator's approval. This is enforced by `scripts/hooks/decision-write-guard.py`, a PreToolUse hook registered in `.claude/settings.json` with `onFailure: "block"`. It refuses every Write, Edit, MultiEdit, NotebookEdit and coursetools `file_write` call into that folder that comes from a subagent, or from a session started as another agent. It identifies the caller from the agent fields Claude Code adds to the hook input, not from a role the agent claims, and it logs each refusal to `logs/decision-guard-audit-log.jsonl` (calibration-log.md, near-miss: HO-05). The hook does not inspect Bash. Under `scripts/run-agent.sh`, the only subagents with Bash (tester and trace-auditor) run with memory omitted, and the main session's Bash is limited to read-only git, so the container layer covers that path.
 
 In GIMPL, "memory" is `/workspace/.memory/`: project memory, the lessons corpus behind `retrieve`, and the storage database. "Memory mounted" on a read-only workspace means the role sees it read-only. "Memory omitted" means the startup script hides it.
 
@@ -242,46 +242,6 @@ The storage audit log is read by the operator, not by an agent. Direct reads of 
 
 **Container permissions:** workspace read-write, memory omitted
 
-## Role: demo-verifier
-
-**Version:** v1.0.0
-
-**Defined in:** `.claude/agents/demo-verifier.md`
-
-### MCP server and operation access
-
-| Operation | Server | Granted | Justification / Denial reason |
-|---|---|---|---|
-| write_entry | storage | NO | A verifier records its verdict in its report, not in stored state. |
-| read_entry | storage | NO | The verdict comes only from `demo-suite.sh` output, cross-checked by `demo1-check.sh` (least privilege). Direct reads are also denied in `.claude/settings.json` (calibration-log.md, near-miss: displacement, DEV-02-r2). |
-| list_entries | storage | NO | Same as `read_entry`: a stored entry is never verification evidence (least privilege). |
-| update_entry | storage | NO | The verifier reports PASS, FAIL or BLOCKED from script output; changing stored state is outside that job (least privilege). |
-| delete_entry | storage | NO | The verifier reports PASS, FAIL or BLOCKED from script output; removing stored state is outside that job (least privilege). |
-| retrieve | retrieval | NO | A lesson is never verification evidence (least privilege). |
-
-### Skill activation scope
-
-| Skill | Activation permitted | Reason if denied |
-|---|---|---|
-| summarize-session | YES | Demo-verifier may summarize its own run. |
-| write-handoff | NO | Demo-verifier reports PASS, FAIL or BLOCKED; it does not carry work between sessions. |
-
-### Data classification ceiling
-
-**Maximum level:** internal
-
-**Reason:** Verification needs the build, the pinned demo, the golden traces and script output, nothing above internal.
-
-### Autonomy level
-
-**Level:** medium
-
-**Conditions for human checkpoint:** Any failure is reported to the operator, never fixed or retried with changes. Golden traces and the manifest are never edited or regenerated. `git status` must show no changes from the run.
-
-**Reason:** The role holds Bash to build and run the checks, and a verifier that changes what it verifies can no longer be trusted.
-
-**Container permissions:** workspace read-write, memory omitted
-
 ## Role: port-planner
 
 **Version:** v1.0.0
@@ -367,3 +327,11 @@ The storage audit log is read by the operator, not by an agent. Direct reads of 
 **Why these two denials are enforced in the container:** The role holds Bash, and a Bash command never passes through an MCP server, `decision-write-guard.py` does not inspect Bash, and the `.claude/settings.json` Edit rules do not cover it. If a port of `P_GiveBody` desyncs at a late tic and the auditor is told the trace is "stale", a writable workspace would let `sed -i` or a `-tichash` rerun overwrite `tests/demos/heretic/golden/demo1.tics` or the manifest's sha256. The demo suite would then pass and the port's regression would be hidden (calibration-log.md, near-miss: HO-05). With memory mounted, the same Bash could read `.memory/reference/lessons/` or `.memory/storage.db` with a command the Read deny rules do not recognize, such as `python3 -c`. That is the displacement pattern seen when blocking one tool moved reads to another (calibration-log.md, near-miss: displacement, DEV-02-r2), and here it would bypass the retrieval ceiling. The auditor does not need memory, because the operator copies the approved sha256, gametics and source commit from the decision record into the task.
 
 **Known limit:** these container denials hold only when the role runs in its own container. A subagent shares the container of the session that invokes it, so a trace-auditor invoked from the orchestrator's session would run with that session's read-write workspace and mounted memory. The role is therefore launched only by the operator with `run-agent.sh`, and the orchestrator does not route to it. That rule is held by instruction today. Red-team prompt 9 tests the container boundary.
+
+## Deterministic conversion history
+
+A role whose work became deterministic code is removed from this policy, together with its agent definition, its `scripts/run-agent.sh` branch, its allow-list entries and its harness grant maps, in one revertible commit. `eval/test_policy.py` checks that a role listed here has none of those left.
+
+| Role | Converted on | Replaced by | Record |
+|---|---|---|---|
+| demo-verifier | 2026-11-25 | `scripts/verify_demos_deterministic.py` (no agent, no MCP access, no Bash grant) | `docs/adr/ADR-001-demo-verifier-deterministic-conversion.md` |

@@ -67,9 +67,10 @@ All three Module 3.2 duties use project `proj-lessons`. The curated corpus is `.
 | fence-reviewer | None | `retrieve` | internal | Retrieves lessons about what the diff touches and checks the change against them, listing them under `## Lessons checked`. No storage: a judge that writes lessons could shape what later reviews are checked against. |
 | tester | None | None | n/a | Evidence must come only from real runs of `demo-suite.sh`, never from a stored note or a lesson. |
 | orchestrator (main session) | None | None | n/a | Routes and gates, it doesn't do content. Enforced: neither server is in `.mcp.json`, so the main session has no storage or retrieval tools, and both allow-lists deny `orchestrator`. |
-| demo-verifier | None | None | n/a | The verdict comes only from `demo-suite.sh` output, cross-checked by `demo1-check.sh`. Its `tools:` list has no MCP tools. |
 | port-planner | None | None | n/a | Port specs cite the C source by file:line, not lessons, and the role is outside the Feature 1 team. Its `tools:` list has no MCP tools. |
 | trace-auditor | None | None | n/a | Audits the golden traces and manifest against git and the approved values the operator copies into the task. The operator launches it with `run-agent.sh`; the orchestrator does not route to it. A lesson is never audit evidence, and the role runs with memory omitted. Its `tools:` list has no MCP tools. |
+
+- demo-verifier: converted to deterministic code (ADR-001, `scripts/verify_demos_deterministic.py`). No agent, no MCP access and no Bash grant required.
 
 The subagent grants are enforced by each definition's `tools:` list, with the withheld storage and retrieval tools also listed under `disallowedTools`. No role gets a confidential ceiling.
 
@@ -83,7 +84,7 @@ The subagent grants are enforced by each definition's `tools:` list, with the wi
 - `Read` and `Edit` of `./.memory/reference/lessons/**`, `./.memory/storage.db*` (including the WAL files) and `./.memory/storage-audit.log`, plus `//memory/**` in case a server falls back to its default `/memory` paths.
 - `Bash(sqlite3 *)`.
 
-`Read` deny rules also cover Grep, Glob and the file commands Claude Code recognizes in Bash (`cat`, `head`, `tail` and so on). Bash deny rules are best-effort: a script such as `python -c` that opens the file itself isn't caught. The real guard is that the tester, demo-verifier and trace-auditor are the only Bash subagents (the orchestrator's Bash is limited to read-only git by `scripts/hooks/orchestrator-bash-guard.py`), and their instructions forbid touching these paths. The audit log is denied to agents too. George reads it himself.
+`Read` deny rules also cover Grep, Glob and the file commands Claude Code recognizes in Bash (`cat`, `head`, `tail` and so on). Bash deny rules are best-effort: a script such as `python -c` that opens the file itself isn't caught. The real guard is that the tester and trace-auditor are the only Bash subagents (the orchestrator's Bash is limited to read-only git by `scripts/hooks/orchestrator-bash-guard.py`), and their instructions forbid touching these paths. The audit log is denied to agents too. George reads it himself.
 
 **Network deviation.** The lesson runs agent containers on an `--internal` Docker network (`agent-internal`). That network also blocks the Claude API, so Claude Code can't work there. Agent sessions run on Docker's normal network instead. The storage and retrieval servers run over stdio as child processes of the agent session, so they open no network port at all. Builds and demo checks still run on `--network none`.
 
@@ -91,7 +92,7 @@ The subagent grants are enforced by each definition's `tools:` list, with the wi
 
 - **Giving the Tester coursetools `test_runner` instead of `Bash`.** Ruled out because it returns PASS without running anything, so a green result would be fake evidence.
 - **Folding the Fence-reviewer into the Tester.** Ruled out because the Tester needs `Bash` to run the demo. A scope judge with `Bash` could change files while judging them. Keeping the judge read-only keeps the verdict trustworthy.
-- **Reusing `demo-verifier` as the Tester.** Deferred. Since Feature 1 Task 8 (2026-11-16) it runs `demo-suite.sh` with `demo1-check.sh` as a cross-check, but it stays a standalone check outside the Feature 1 team.
+- **Reusing `demo-verifier` as the Tester.** Closed. The standalone demo check is deterministic code since ADR-001 (`scripts/verify_demos_deterministic.py`), so there is no demo-verifier agent to reuse. Inside a team task the Tester still runs `demo-suite.sh`.
 - **Giving the Tester `retrieve` as the reviewing role.** Ruled out. The Tester's evidence must come only from real runs, and it holds `Bash`. The Fence-reviewer is read-only, so it's the safer role to check the work against lessons.
 - **Trusting the ceiling in each agent file.** Ruled out. The ceiling is a caller argument, so it's clamped server-side instead.
 - **A Project Manager role with `task_tracker`.** Ruled out for now. GIMPL has no ticket system, and George tracks status in `.memory/project/current-state.md` himself.

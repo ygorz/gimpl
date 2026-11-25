@@ -79,7 +79,6 @@ EXPECTED_GRANTS = {
     "tester": {"Bash", "mcp__coursetools__file_read"},
     "fence-reviewer": {"mcp__coursetools__file_read", "mcp__coursetools__codebase_search",
                        "mcp__retrieval__retrieve"},
-    "demo-verifier": {"Read", "Grep", "Glob", "Bash"},
     "port-planner": {"Read", "Grep", "Glob", "Write", "Edit"},
     # Lesson 4.1 Exercise 1: from .claude/agents/trace-auditor.md and its
     # docs/governance-policy.md entry (Bash only to hash, count and read git).
@@ -135,8 +134,6 @@ FORBIDDEN_BY_ROLE = {
                "mcp__coursetools__file_write", "Write", "Edit"},
     "fence-reviewer": {"mcp__storage__write_entry", "mcp__coursetools__file_write",
                        "Write", "Edit", "Bash"},
-    "demo-verifier": {"mcp__storage__write_entry", "mcp__retrieval__retrieve",
-                      "Write", "Edit"},
     "port-planner": {"mcp__storage__write_entry", "mcp__retrieval__retrieve", "Bash"},
     "trace-auditor": {"mcp__storage__write_entry", "mcp__retrieval__retrieve",
                       "mcp__coursetools__file_write", "Write", "Edit"},
