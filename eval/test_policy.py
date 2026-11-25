@@ -10,7 +10,10 @@ things, in either direction:
 - the _authorize() guard on every storage and retrieval operation;
 - the agent files in .claude/agents/ (tool grants, skill preloads and the
   role each agent's own MCP server is started with);
-- the case block in scripts/run-agent.sh (Layer 1, container mounts).
+- the case block in scripts/run-agent.sh (Layer 1, container mounts);
+- .github/workflows/ci.yml, against its design in docs/ci-step-design.md
+  (gates that cannot be bypassed, an advisory review that cannot block, an
+  audit trail that always runs, one step-scoped secret).
 
 Role names, grants and ceilings come from the policy document, not from this
 file, so a new role is covered as soon as its policy entry exists. When a
@@ -20,7 +23,8 @@ side is right and fix that side only.
 The hooks have their own tests in eval/tests/. Nothing here needs Docker,
 the network, a secret or a running MCP server: the servers are read as
 source, and run-agent.sh runs in its dry-run mode, which prints the docker
-command instead of running it.
+command instead of running it. The CI checks read ci.yml with PyYAML,
+pinned in requirements-ci.txt and installed in the gimpl image.
 """
 
 import ast
@@ -518,3 +522,222 @@ def test_unknown_role_cannot_launch():
     assert result.returncode != 0
     assert "docker" not in result.stdout
     assert "no policy entry" in result.stderr
+
+
+# --- CI pipeline: .github/workflows/ci.yml --------------------------------
+#
+# docs/ci-step-design.md is the written design of the pipeline, the way
+# docs/governance-policy.md is the written policy for the agents. Which jobs
+# gate is read from that document; these tests fail where ci.yml would let a
+# gate be bypassed or a secret leak, or where the two disagree.
+
+CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "ci.yml")
+CI_DESIGN = os.path.join(ROOT, "docs", "ci-step-design.md")
+
+# The policy gate and the eval gate are permanent gates: the design may add
+# gates but never demote these two.
+PERMANENT_GATES = {"policy-gate", "eval-gate"}
+CLASSIFIER = "change-type-check"
+AUDIT_JOB = "audit-trail"
+REVIEW_JOB = "agent-review"
+REVIEWER_SECRET = "CI_REVIEWER_OPENROUTER_KEY"
+REVIEWER_STEP = "Run advisory reviewer"
+
+# Shapes of real API keys and tokens. Built from parts so this file never
+# matches its own scan.
+KEY_SHAPES = re.compile("|".join([
+    "sk-" + r"or-v1-[A-Za-z0-9]{16,}",
+    "sk-" + r"ant-[A-Za-z0-9_-]{16,}",
+    "gh" + r"[pousr]_[A-Za-z0-9]{30,}",
+    "github" + r"_pat_[A-Za-z0-9_]{30,}",
+]))
+
+
+def load_workflow():
+    """ci.yml as data. PyYAML is pinned in requirements-ci.txt and installed
+    in the gimpl image; the import is here so a missing library fails only
+    these tests, with a clear message."""
+    import yaml
+    with open(CI_WORKFLOW, encoding="utf-8") as f:
+        workflow = yaml.safe_load(f)
+    # YAML 1.1 reads the bare key `on` as the boolean True.
+    if True in workflow:
+        workflow["on"] = workflow.pop(True)
+    return workflow
+
+
+def load_ci_design():
+    """{job key: classification} from the '## Step: ... (`job-key`)' sections."""
+    text = _read(CI_DESIGN)
+    design = {}
+    parts = re.split(r"^## Step: .*\(`([a-z0-9-]+)`\)\s*$", text, flags=re.M)
+    for key, body in zip(parts[1::2], parts[2::2]):
+        body = re.split(r"^## ", body, flags=re.M)[0]
+        match = re.search(r"^- \*\*Classification:\*\*\s*(.+)$", body, re.M)
+        design[key] = match.group(1).strip() if match else None
+    return design
+
+
+def _steps_text(job):
+    return "\n".join(str(step.get("run", "")) + " " + str(step.get("uses", ""))
+                     for step in job.get("steps", []))
+
+
+def _needs(job):
+    needs = job.get("needs", [])
+    return {needs} if isinstance(needs, str) else set(needs)
+
+
+def _gating_jobs():
+    return {key for key, cls in load_ci_design().items() if cls and cls.startswith("gating")}
+
+
+def test_ci_workflow_and_design_present():
+    for path in (CI_WORKFLOW, CI_DESIGN):
+        assert os.path.isfile(path), f"missing {os.path.relpath(path, ROOT)}"
+    assert load_workflow().get("jobs"), "ci.yml defines no jobs"
+
+
+def test_ci_triggers_have_no_path_filter():
+    """A paths: filter skips the whole workflow, required gates included."""
+    triggers = load_workflow()["on"]
+    assert "pull_request" in triggers, "ci.yml does not run on pull requests"
+    assert "push" in triggers, "ci.yml does not run on push"
+    for event, config in triggers.items():
+        config = config or {}
+        for key in ("paths", "paths-ignore"):
+            assert key not in config, f"ci.yml '{event}' trigger has a {key} filter"
+
+
+def test_ci_design_covers_every_job():
+    """Every job in ci.yml has a design section, and every designed job exists."""
+    jobs = set(load_workflow()["jobs"])
+    design = load_ci_design()
+    assert jobs == set(design), (
+        f"ci.yml jobs without a design section: {sorted(jobs - set(design))}; "
+        f"designed jobs missing from ci.yml: {sorted(set(design) - jobs)}")
+    missing = sorted(key for key, cls in design.items() if not cls)
+    assert not missing, f"design sections with no Classification line: {missing}"
+
+
+def test_permanent_gates_stay_gating():
+    gating = _gating_jobs()
+    assert PERMANENT_GATES <= gating, (
+        f"docs/ci-step-design.md no longer classifies {sorted(PERMANENT_GATES - gating)} as gating")
+
+
+def _assert_gate_cannot_be_bypassed(key):
+    jobs = load_workflow()["jobs"]
+    assert key in jobs, f"gating job {key} is missing from ci.yml"
+    job = jobs[key]
+    assert job.get("continue-on-error") in (None, False), f"{key}: continue-on-error makes the gate advisory"
+    assert "if" not in job, f"{key}: a job-level if: lets the gate report 'skipped' instead of a result"
+    for step in job.get("steps", []):
+        assert step.get("continue-on-error") in (None, False), (
+            f"{key}: step {step.get('name') or step.get('uses')!r} has continue-on-error")
+
+
+@pytest.mark.parametrize("job_key", sorted(PERMANENT_GATES))
+def test_gating_job_cannot_be_bypassed(job_key):
+    """A gate blocks only if it always reports a real result: no
+    continue-on-error (job or step) and no job-level if:, since a skipped
+    job satisfies a required status check."""
+    _assert_gate_cannot_be_bypassed(job_key)
+
+
+def test_every_designed_gate_cannot_be_bypassed():
+    """Gates the design adds later get the same check."""
+    for key in sorted(_gating_jobs() - PERMANENT_GATES):
+        _assert_gate_cannot_be_bypassed(key)
+
+
+def test_policy_gate_runs_this_suite():
+    job = load_workflow()["jobs"]["policy-gate"]
+    assert "eval/test_policy.py" in _steps_text(job), "policy-gate does not run eval/test_policy.py"
+    assert "--json-report" in _steps_text(job), "policy-gate does not write a JSON report"
+
+
+def test_eval_gate_follows_the_classifier():
+    jobs = load_workflow()["jobs"]
+    job = jobs["eval-gate"]
+    assert {CLASSIFIER, "policy-gate"} <= _needs(job), "eval-gate must need change-type-check and policy-gate"
+    conditions = " ".join(str(step.get("if", "")) for step in job.get("steps", []))
+    assert f"needs.{CLASSIFIER}.outputs.requires-eval" in conditions, (
+        "eval-gate's steps do not read the classifier's requires-eval output")
+    text = _steps_text(job)
+    assert "scripts/run-eval-gate.py --reports /reports" in text, "eval-gate does not run the harness"
+    assert "--not-triggered" in text, "eval-gate records no not_triggered state when the harness is skipped"
+
+
+def test_classifier_flags_cover_the_enforcement_files():
+    """Every file this suite reads as enforcement sets requires-eval, so a
+    change to it also runs the harness. A README change does not."""
+    job = load_workflow()["jobs"][CLASSIFIER]
+    outputs = job.get("outputs", {})
+    for flag in ("changed-files", "requires-eval", "touches-policy"):
+        assert flag in outputs, f"change-type-check has no {flag} output"
+    match = re.search(r"REQUIRES_EVAL_RE='([^']+)'", _steps_text(job))
+    assert match, "change-type-check has no REQUIRES_EVAL_RE pattern"
+    pattern = re.compile(match.group(1))
+    enforcement = [POLICY, SETTINGS, MCP_JSON, RUN_AGENT, *SERVERS.values(), *ALLOW_LISTS.values(),
+                   os.path.join(AGENTS_DIR, "planner.md"), os.path.join(SKILLS_DIR, "x", "SKILL.md"),
+                   os.path.join(ROOT, "scripts", "hooks", "orchestrator-bash-guard.py"),
+                   os.path.abspath(__file__)]
+    for path in enforcement:
+        rel = os.path.relpath(path, ROOT).replace(os.sep, "/")
+        assert pattern.match(rel), f"a change to {rel} would not set requires-eval"
+    for rel in ("README.md", "src/heretic/p_mobj.c"):
+        assert not pattern.match(rel), f"a change to {rel} would needlessly set requires-eval"
+
+
+def test_advisory_review_cannot_block():
+    job = load_workflow()["jobs"][REVIEW_JOB]
+    assert job.get("continue-on-error") is True, f"{REVIEW_JOB} must set continue-on-error: true"
+    assert REVIEW_JOB not in _gating_jobs(), f"docs/ci-step-design.md classifies {REVIEW_JOB} as gating"
+    assert load_ci_design()[REVIEW_JOB].startswith("advisory"), f"{REVIEW_JOB} is not classified advisory"
+
+
+def test_audit_trail_always_runs_after_every_job():
+    jobs = load_workflow()["jobs"]
+    job = jobs[AUDIT_JOB]
+    assert "always()" in str(job.get("if", "")), f"{AUDIT_JOB} must run with if: always()"
+    others = set(jobs) - {AUDIT_JOB}
+    assert _needs(job) == others, (
+        f"{AUDIT_JOB} needs {sorted(_needs(job))}; it must need every other job: {sorted(others)}")
+    # v4 or later: the v3 artifact actions cannot read v4 uploads.
+    downloads = [s for s in job.get("steps", [])
+                 if re.fullmatch(r"actions/download-artifact@v([4-9]|\d\d+)(\.\S*)?", str(s.get("uses", "")))]
+    assert downloads, f"{AUDIT_JOB} does not download artifacts with actions/download-artifact@v4 or later"
+    config = downloads[0].get("with", {})
+    assert config.get("merge-multiple") is True and "name" not in config, (
+        f"{AUDIT_JOB} must download every artifact (no name) with merge-multiple: true")
+
+
+def test_secret_is_scoped_to_the_reviewer_step():
+    """The only secret is the reviewer's purpose-named key, and only the
+    reviewer step receives it: not the workflow, not a job, not a
+    deterministic step."""
+    workflow = load_workflow()
+    found = []
+
+    def scan(where, value):
+        for name in re.findall(r"secrets\.([A-Za-z0-9_]+)", str(value)):
+            found.append((where, name))
+
+    scan("workflow", {k: v for k, v in workflow.items() if k != "jobs"})
+    for key, job in workflow["jobs"].items():
+        scan(f"job {key}", {k: v for k, v in job.items() if k != "steps"})
+        for step in job.get("steps", []):
+            scan(f"job {key} step {step.get('name') or step.get('uses')!r}", step)
+    allowed = (f"job {REVIEW_JOB} step {REVIEWER_STEP!r}", REVIEWER_SECRET)
+    assert found == [allowed], f"secrets referenced outside the reviewer step, or under another name: {found}"
+    step = next(s for s in workflow["jobs"][REVIEW_JOB]["steps"] if s.get("name") == REVIEWER_STEP)
+    assert REVIEWER_SECRET in step.get("env", {}), "the reviewer secret must arrive through the step's env"
+
+
+def test_no_key_values_in_ci_files():
+    paths = [CI_WORKFLOW, CI_DESIGN]
+    scripts = os.path.join(ROOT, "scripts")
+    paths += [os.path.join(scripts, n) for n in sorted(os.listdir(scripts)) if n.endswith((".py", ".sh"))]
+    leaks = [os.path.relpath(p, ROOT) for p in paths if KEY_SHAPES.search(_read(p))]
+    assert not leaks, f"a value shaped like an API key or token is committed in: {leaks}"
