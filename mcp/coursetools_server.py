@@ -23,14 +23,18 @@ mcp = FastMCP(SERVER_NAME)
 ROOT = Path(os.environ.get("COURSETOOLS_ROOT", ".")).resolve()
 ALLOWLIST_PATH = Path(os.environ.get("COURSETOOLS_ALLOWLIST", "mcp/roles.allowlist.json"))
 
+# Fallback only; mcp/roles.allowlist.json is the list in use. Both name GIMPL's
+# roles (docs/routing-and-tool-grant-map.md, "Grant lines"). No role holds
+# shell, task_tracker or web_search, and test_runner is a dummy that always
+# returns PASS, so it is granted to no one.
 DEFAULT_ALLOWLIST: dict[str, list[str]] = {
-    "file_read": ["planner", "implementer", "reviewer", "tester", "orchestrator"],
+    "file_read": ["planner", "implementer", "tester", "orchestrator", "fence-reviewer"],
     "file_write": ["implementer", "orchestrator"],
-    "codebase_search": ["planner", "implementer", "reviewer"],
+    "codebase_search": ["planner", "implementer", "fence-reviewer"],
     "shell": [],
-    "test_runner": ["tester"],
-    "task_tracker": ["project-manager"],
-    "web_search": ["researcher"],
+    "test_runner": [],
+    "task_tracker": [],
+    "web_search": [],
 }
 
 

@@ -1,6 +1,6 @@
 # Project Memory Index
 
-Last updated: 2026-11-16
+Last updated: 2026-11-25
 
 ## Active entries
 
@@ -40,14 +40,13 @@ Last updated: 2026-11-16
  check, exit 255 normal for -timedemo. Recorded 2026-11-07.
  Review by 2027-02-05.
 
-- `current-state.md` — Feature 1 status (Task 3 trace committed
- in f66cb067 on 2026-11-07; Task 4 manifest and Task 5 runner
- done 2026-11-14; Task 7 failure-path runs done 2026-11-16 in
- 1fcf3926; git is the source of truth for commit status),
- Task 8 done 2026-11-16 (demo-verifier calls the suite);
- next action: merge to master, deferred work and open questions. Workflow-scoped;
- archive when feature/per-tic-demo-suite merges. Updated
- 2026-11-16.
+- `current-state.md` — Module 4 status on master (Feature 1,
+ Module 3 calibration, Module 4 governance and CI merged; policy
+ v1.4.0, 8 roles, six-job CI); next action: Lesson 4.3
+ step classification and the demo-verifier conversion (ADR-001),
+ then 4.3 Exercise 1 (ADR-002); deferred work and open questions.
+ Workflow-scoped; archive when Module 4 is done. Updated
+ 2026-11-25.
 
 - `../knowledge/coding-standards.md` — Coding standards
  for this project. Human-maintained, read-only.
@@ -63,7 +62,10 @@ Last updated: 2026-11-16
 
 ## Archived entries
 
-(none yet)
+- `archive/2026-11-16-feature1-current-state.md` — Feature 1
+ (per-tic demo suite) status as it stood at merge (89cab71b,
+ 2026-11-16): Tasks 1-8 done, Task 9 deferred. Archived
+ 2026-11-25 when Module 4 work on master replaced it.
 
 ## Pruning schedule
 
