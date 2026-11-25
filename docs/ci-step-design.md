@@ -43,7 +43,7 @@ Every job's outcome is recorded in the audit trail as exactly one state, so a jo
 | `skipped` | The job did not run because a job it needs did not succeed, or it ran and recorded a skip (the reviewer with no key). |
 | `cancelled` | The run was cancelled before the job finished. |
 
-## Step: Change classifier (`change-type-check`)
+## Change classifier (`change-type-check`)
 
 - **Does:** Lists the files the change touches and sets the flags that decide which heavy work later jobs do.
 - **Input:** The git diff between the pull request's base commit and the merge commit (or, on a push to `master`, between the previous and new head), from a full-history checkout (`fetch-depth: 0`).
@@ -56,7 +56,7 @@ Every job's outcome is recorded in the audit trail as exactly one state, so a jo
 - **Credentials:** none (read-only checkout).
 - **Verified:** pending the first pull request run.
 
-## Step: Policy test suite (`policy-gate`)
+## Policy test suite (`policy-gate`)
 
 - **Does:** Runs `eval/test_policy.py`, which fails wherever `docs/governance-policy.md` and the artifacts that enforce it disagree, and wherever `ci.yml` disagrees with this design.
 - **Input:** The whole repository: the policy document; `mcp/storage/allow-list.json`, `mcp/retrieval/allow-list.json` and the `_authorize()` guard in both servers; the agent files in `.claude/agents/` and `.claude/settings.json`; the case block in `scripts/run-agent.sh` (run in dry-run mode); and `.github/workflows/ci.yml` with this document.
@@ -66,7 +66,7 @@ Every job's outcome is recorded in the audit trail as exactly one state, so a jo
 - **Credentials:** none.
 - **Verified:** pending the first pull request run, and a test change that breaks one policy entry to show the gate failing.
 
-## Step: Evaluation harness (`eval-gate`)
+## Evaluation harness (`eval-gate`)
 
 - **Does:** Runs GIMPL's Module 3 evaluation harness when a change can affect agent behaviour, and records a `not_triggered` result when it cannot.
 - **Input:** The whole repository and the classifier's `requires-eval` output.
@@ -79,7 +79,7 @@ Every job's outcome is recorded in the audit trail as exactly one state, so a jo
 - **Credentials:** none. No check calls a model.
 - **Verified:** pending the first pull request run (`requires-eval=true`) and a documentation-only change (`"status": "not_triggered"`).
 
-## Step: Advisory code review (`agent-review`)
+## Advisory code review (`agent-review`)
 
 - **Does:** Sends the pull request's changed text files to a model through OpenRouter and posts the review as a pull request comment, without ever blocking the merge.
 - **Input:** The classifier's `changed-files` list and those files' contents, read from the read-only checkout. Files under `.memory/`, `logs/` and `.eval-artifacts/`, and any `.env`, key or credentials file, are never sent.
@@ -92,7 +92,7 @@ Every job's outcome is recorded in the audit trail as exactly one state, so a jo
   - To confirm a newly added key arrives without exposing it, a temporary step may print its length (`${#CI_REVIEWER_OPENROUTER_KEY}`), never its value. That step is removed before merging.
 - **Verified:** pending the first pull request run (expected: `skipped`, `key_present: false`, job green).
 
-## Step: Audit trail (`audit-trail`)
+## Audit trail (`audit-trail`)
 
 - **Does:** Combines every report from the run into one JSON record and posts a summary, whatever the other jobs did.
 - **Input:** Every artifact the run uploaded, downloaded into one directory with `actions/download-artifact@v4` (no artifact name, `merge-multiple: true`), plus each job's result from the `needs` context and the run's metadata.

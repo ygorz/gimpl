@@ -567,10 +567,12 @@ def load_workflow():
 
 
 def load_ci_design():
-    """{job key: classification} from the '## Step: ... (`job-key`)' sections."""
+    """{job key: classification} from the job sections: each level-2 heading
+    that ends with the job key in backticks, e.g. '## Policy test suite
+    (`policy-gate`)'. Other level-2 headings are not job sections."""
     text = _read(CI_DESIGN)
     design = {}
-    parts = re.split(r"^## Step: .*\(`([a-z0-9-]+)`\)\s*$", text, flags=re.M)
+    parts = re.split(r"^## [^\n]*\(`([a-z0-9-]+)`\)[ \t]*$", text, flags=re.M)
     for key, body in zip(parts[1::2], parts[2::2]):
         body = re.split(r"^## ", body, flags=re.M)[0]
         match = re.search(r"^- \*\*Classification:\*\*\s*(.+)$", body, re.M)
