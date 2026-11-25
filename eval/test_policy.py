@@ -13,7 +13,9 @@ things, in either direction:
 - the case block in scripts/run-agent.sh (Layer 1, container mounts);
 - .github/workflows/ci.yml, against its design in docs/ci-step-design.md
   (gates that cannot be bypassed, an advisory review that cannot block, an
-  audit trail that always runs, one step-scoped secret).
+  audit trail that always runs and records every job, one step-scoped
+  secret, and a pipeline-integrity job that depends on no other job and
+  whose checker catches each weakening it exists for).
 
 Role names, grants and ceilings come from the policy document, not from this
 file, so a new role is covered as soon as its policy entry exists. When a
@@ -28,10 +30,13 @@ pinned in requirements-ci.txt and installed in the gimpl image.
 """
 
 import ast
+import copy
+import importlib.util
 import json
 import os
 import re
 import subprocess
+import sys
 
 import pytest
 
@@ -534,12 +539,18 @@ def test_unknown_role_cannot_launch():
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "ci.yml")
 CI_DESIGN = os.path.join(ROOT, "docs", "ci-step-design.md")
 
-# The policy gate and the eval gate are permanent gates: the design may add
-# gates but never demote these two.
-PERMANENT_GATES = {"policy-gate", "eval-gate"}
+# The policy gate, the eval gate and the pipeline integrity check are
+# permanent gates: the design may add gates but never demote these three.
+PERMANENT_GATES = {"policy-gate", "eval-gate", "pipeline-integrity"}
 CLASSIFIER = "change-type-check"
 AUDIT_JOB = "audit-trail"
 REVIEW_JOB = "agent-review"
+INTEGRITY_JOB = "pipeline-integrity"
+INTEGRITY_NAME = "Pipeline Integrity Check"
+INTEGRITY_SCRIPT = os.path.join(ROOT, "scripts", "check-pipeline-integrity.py")
+INTEGRITY_REPORT = "pipeline-integrity-report.json"
+INTEGRITY_CHECKS = ("gates", "audit", "classifier", "self")
+AUDIT_SCRIPT = os.path.join(ROOT, "scripts", "build-audit-trail.py")
 REVIEWER_SECRET = "CI_REVIEWER_OPENROUTER_KEY"
 REVIEWER_STEP = "Run advisory reviewer"
 
@@ -592,6 +603,15 @@ def _needs(job):
 
 def _gating_jobs():
     return {key for key, cls in load_ci_design().items() if cls and cls.startswith("gating")}
+
+
+def _load_script(path, name):
+    """A script in scripts/ as a module (its file name has hyphens)."""
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_ci_workflow_and_design_present():
@@ -675,6 +695,10 @@ def test_classifier_flags_cover_the_enforcement_files():
     """Every file this suite reads as enforcement sets requires-eval, so a
     change to it also runs the harness. A README change does not."""
     job = load_workflow()["jobs"][CLASSIFIER]
+    # A skipped classifier skips every job that needs it, and a skipped
+    # required check passes.
+    assert "if" not in job, f"{CLASSIFIER}: a job-level if: would skip the gates that need it"
+    assert job.get("continue-on-error") in (None, False), f"{CLASSIFIER}: continue-on-error"
     outputs = job.get("outputs", {})
     for flag in ("changed-files", "requires-eval", "touches-policy"):
         assert flag in outputs, f"change-type-check has no {flag} output"
@@ -702,7 +726,8 @@ def test_advisory_review_cannot_block():
 def test_audit_trail_always_runs_after_every_job():
     jobs = load_workflow()["jobs"]
     job = jobs[AUDIT_JOB]
-    assert "always()" in str(job.get("if", "")), f"{AUDIT_JOB} must run with if: always()"
+    condition = re.sub(r"\s+", "", str(job.get("if", "")))
+    assert condition in ("always()", "${{always()}}"), f"{AUDIT_JOB} must run with exactly if: always()"
     others = set(jobs) - {AUDIT_JOB}
     assert _needs(job) == others, (
         f"{AUDIT_JOB} needs {sorted(_needs(job))}; it must need every other job: {sorted(others)}")
@@ -743,3 +768,106 @@ def test_no_key_values_in_ci_files():
     paths += [os.path.join(scripts, n) for n in sorted(os.listdir(scripts)) if n.endswith((".py", ".sh"))]
     leaks = [os.path.relpath(p, ROOT) for p in paths if KEY_SHAPES.search(_read(p))]
     assert not leaks, f"a value shaped like an API key or token is committed in: {leaks}"
+
+
+def test_audit_script_reads_every_job_report():
+    """build-audit-trail.py knows every ci.yml job, treats exactly the
+    designed gates as gating, and each job uploads the report file the
+    script reads, so no job's result reaches the record without evidence."""
+    audit = _load_script(AUDIT_SCRIPT, "build_audit_trail")
+    jobs = load_workflow()["jobs"]
+    assert set(audit.REPORTS) == set(jobs) - {AUDIT_JOB}, (
+        f"build-audit-trail.py REPORTS {sorted(audit.REPORTS)} != ci.yml jobs {sorted(set(jobs) - {AUDIT_JOB})}")
+    assert audit.GATING == _gating_jobs(), (
+        f"build-audit-trail.py GATING {sorted(audit.GATING)} != designed gates {sorted(_gating_jobs())}")
+    for key, report in audit.REPORTS.items():
+        uploads = " ".join(str(s.get("with", {}).get("path", "")) for s in jobs[key].get("steps", [])
+                           if str(s.get("uses", "")).startswith("actions/upload-artifact@"))
+        assert report in uploads, f"{key} does not upload {report}"
+    run = " ".join(str(s.get("run", "")) for s in jobs[AUDIT_JOB].get("steps", []))
+    for key in audit.REPORTS:
+        assert f'--result "{key}=' in run, f"{AUDIT_JOB} does not pass {key}'s result to build-audit-trail.py"
+
+
+def test_pipeline_integrity_runs_on_its_own():
+    """No needs:, so the check runs whatever the other jobs do; one step per
+    check; the report is written and uploaded even when a check fails."""
+    job = load_workflow()["jobs"][INTEGRITY_JOB]
+    assert job.get("name") == INTEGRITY_NAME, f"{INTEGRITY_JOB} must be named {INTEGRITY_NAME!r}"
+    assert not _needs(job), f"{INTEGRITY_JOB} must not need other jobs; it needs {sorted(_needs(job))}"
+    steps = job.get("steps", [])
+    runs = [str(s.get("run", "")) for s in steps]
+    for i, check in enumerate(INTEGRITY_CHECKS):
+        owners = [n for n, r in enumerate(runs) if f"check-pipeline-integrity.py --check {check}" in r]
+        assert len(owners) == 1, f"{INTEGRITY_JOB} must run --check {check} in exactly one step of its own"
+        if i:
+            condition = re.sub(r"\s+", "", str(steps[owners[0]].get("if", "")))
+            assert condition == "success()||failure()", (
+                f"--check {check} must still run after an earlier check fails (if: success() || failure())")
+    report = [s for s in steps if "--report" in str(s.get("run", "")) and INTEGRITY_REPORT in str(s.get("run", ""))]
+    upload = [s for s in steps if str(s.get("uses", "")).startswith("actions/upload-artifact@")
+              and INTEGRITY_REPORT in str(s.get("with", {}).get("path", ""))]
+    assert report and str(report[0].get("if")) == "always()", f"{INTEGRITY_JOB} must write its report with if: always()"
+    assert upload and str(upload[0].get("if")) == "always()", f"{INTEGRITY_JOB} must upload its report with if: always()"
+
+
+def test_integrity_checker_passes_on_this_workflow():
+    result = subprocess.run([sys.executable, INTEGRITY_SCRIPT, "--check", "all"],
+                            capture_output=True, text=True, cwd=ROOT)
+    assert result.returncode == 0, f"check-pipeline-integrity.py fails on ci.yml:\n{result.stdout}{result.stderr}"
+
+
+def _weaken(name, workflow):
+    jobs = workflow["jobs"]
+    if name == "policy-gate step continue-on-error":
+        next(s for s in jobs["policy-gate"]["steps"] if s.get("name") == "Run policy tests")["continue-on-error"] = True
+    elif name == "eval-gate job continue-on-error":
+        jobs["eval-gate"]["continue-on-error"] = True
+    elif name == "policy-gate job-level if":
+        jobs["policy-gate"]["if"] = "github.event_name == 'push'"
+    elif name == "audit-trail without if: always()":
+        jobs[AUDIT_JOB].pop("if", None)
+    elif name == "audit-trail narrowed if":
+        jobs[AUDIT_JOB]["if"] = "always() && github.event_name == 'push'"
+    elif name == "audit-trail drops a job from needs":
+        jobs[AUDIT_JOB]["needs"] = [n for n in jobs[AUDIT_JOB]["needs"] if n != INTEGRITY_JOB]
+    elif name == "change-type-check deleted":
+        jobs.pop(CLASSIFIER, None)
+    elif name == "change-type-check skipped":
+        jobs[CLASSIFIER]["if"] = False
+    elif name == "pipeline-integrity needs policy-gate":
+        jobs[INTEGRITY_JOB]["needs"] = ["policy-gate"]
+    return workflow
+
+
+WEAKENINGS = {
+    "policy-gate step continue-on-error": "gates",
+    "eval-gate job continue-on-error": "gates",
+    "policy-gate job-level if": "gates",
+    "audit-trail without if: always()": "audit",
+    "audit-trail narrowed if": "audit",
+    "audit-trail drops a job from needs": "audit",
+    "change-type-check deleted": "classifier",
+    "change-type-check skipped": "classifier",
+    "pipeline-integrity needs policy-gate": "self",
+}
+
+
+@pytest.mark.parametrize("weakening", sorted(WEAKENINGS))
+def test_integrity_checker_catches_weakening(weakening, tmp_path):
+    """Each weakening fails the check that guards it and no other, so a
+    failure names its guardrail. (Whether ci.yml itself is clean is
+    test_integrity_checker_passes_on_this_workflow's job; checks that already
+    fail on it are ignored here.)"""
+    import yaml
+    checker = _load_script(INTEGRITY_SCRIPT, "check_pipeline_integrity")
+
+    def failing(workflow, name):
+        path = tmp_path / f"{name}.yml"
+        path.write_text(yaml.safe_dump(workflow, sort_keys=False))
+        return {c for c in INTEGRITY_CHECKS if checker.run_check(c, path)["status"] != "passed"}
+
+    before = failing(load_workflow(), "as-committed")
+    after = failing(_weaken(weakening, copy.deepcopy(load_workflow())), "weakened")
+    assert after == before | {WEAKENINGS[weakening]}, (
+        f"{weakening}: expected check {WEAKENINGS[weakening]!r} to fail, and no other; failing: {sorted(after)}")
