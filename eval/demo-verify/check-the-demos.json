@@ -1,0 +1,4 @@
+{
+  "request": "Check the demos.",
+  "build_if_stale": true
+}

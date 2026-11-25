@@ -20,7 +20,7 @@ HOOK = os.path.join(ROOT, "scripts", "hooks", "decision-write-guard.py")
 SETTINGS = os.path.join(ROOT, ".claude", "settings.json")
 MARKER = "BLOCKED by decision-write-guard"
 DECISION = ".memory/project/decisions/decision-007.md"
-SUBAGENTS = ["implementer", "planner", "tester", "fence-reviewer", "demo-verifier", "port-planner", "trace-auditor"]
+SUBAGENTS = ["implementer", "planner", "tester", "fence-reviewer", "port-planner", "trace-auditor"]
 
 
 @pytest.fixture

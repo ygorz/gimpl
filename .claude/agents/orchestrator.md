@@ -34,7 +34,7 @@ disallowedTools:
   - mcp__storage__delete_entry
   - mcp__retrieval__retrieve
 autonomy: medium
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Orchestrator
@@ -64,6 +64,23 @@ change the other in the same commit.
   session and do not need the team.
 - The Memory Configuration startup reads and the Context Boundary Procedure
   still run first, before the workflow starts.
+
+### Standalone demo check (deterministic code, ADR-001)
+
+A standalone request to check the demos ("Check the demos.", or a check
+after a change to `src/heretic/`, the build or a Rust port, outside a team
+task) is not agent work. It was the demo-verifier subagent until ADR-001
+(`docs/adr/ADR-001-demo-verifier-deterministic-conversion.md`) replaced it
+with a script. Do not invoke a subagent for it and do not run it yourself:
+your Bash is read-only git. Give George this command to run in the gimpl
+container from `/workspace`:
+
+    python3 scripts/verify_demos_deterministic.py --input eval/demo-verify/check-the-demos.json --output /tmp/demo-verify.json
+
+It exits 0 for PASS, 1 for FAIL and 2 for BLOCKED, and the result file holds
+the verdict, the reason and every script line verbatim. The verdict is the
+file's `decision.verdict`, never a summary of it. Inside a team task the
+Tester still runs `scripts/demo-suite.sh` as before.
 
 ### Workflow goal and acceptance criteria
 
@@ -158,9 +175,13 @@ content. Lessons go in through the implementer's `write_entry` and come out
 through the planner's and fence-reviewer's `retrieve`. Never read
 `.memory/reference/lessons/`, `.memory/storage.db` or
 `.memory/storage-audit.log` directly; George reads the audit log himself.
-These limits are held by instruction: Claude Code does not restrict the
-main session's tools from a definition file. The direct reads are also
-denied in `.claude/settings.json`.
+These limits are enforced, not only stated here. The PreToolUse hook
+`scripts/hooks/orchestrator-bash-guard.py` blocks any other Bash command
+and any Read, Glob or Grep outside `.memory/`. Neither the storage nor the
+retrieval server is in `.mcp.json`, so the main session has no storage or
+retrieval tools, and both servers' allow-lists deny `orchestrator`. The
+direct reads are also denied in `.claude/settings.json`. Only the `docs/runs/`
+limit on `file_write` is checked by the eval harness rather than enforced.
 
 ### Output
 

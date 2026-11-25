@@ -570,3 +570,77 @@ tasks.
     the system.
   - Every task branched from `432e6797` and could not see the others'
     output. No system or eval file changed between tasks.
+
+## Entry 2: 2026-11-25, demo-verifier converted to deterministic code (ADR-001)
+
+Lesson 4.3. `docs/step-classification.md` rated the standalone demo check a strong candidate, and `docs/adr/ADR-001-demo-verifier-deterministic-conversion.md` records the decision. This entry holds the before-and-after measurement and the end-to-end regression check.
+
+Same input on both sides: the request "Check the demos." (`eval/demo-verify/check-the-demos.json` for the script) at commit `8bd4e24c`, in the gimpl container, with `src/chocolate-heretic` already built so neither side rebuilds. Measurement files were kept outside the repo, in `~/dv-measure/` on the host.
+
+### Before conversion: demo-verifier agent, 3 runs
+
+Command, run 3 times from the repo root:
+`./scripts/run-agent.sh demo-verifier claude --agent demo-verifier --print "Check the demos." --output-format json --allowedTools "Bash,Read,Grep,Glob" < /dev/null`
+
+Duration, cost and tokens are from Claude Code's JSON result (`duration_ms`, `total_cost_usd`, `usage`). Tokens are input + output + cache write, the count the harness `cost` check uses; cache reads are not counted.
+
+| Run | Verdict | Duration | Cost (USD) | Tokens | Turns | Quoted the PASS lines exactly |
+|---|---|---|---|---|---|---|
+| before-1 | PASS | 29.2 s | 0.1750 | 16,864 | 6 | yes |
+| before-2 | PASS | 32.1 s | 0.0894 | 5,627 | 6 | yes |
+| before-3 | PASS | 28.5 s | 0.0798 | 5,013 | 6 | yes |
+| **Mean** | | **29.9 s** | **0.1147** | **9,168** | | 3/3 |
+
+- **Predictability:** same verdict on all 3 runs: yes. Same report text on all 3 runs: no (report lengths 2795, 3007, 2899 characters).
+- **Quality, the checks this step's output must pass:** the verdict is the suite's verdict; the report quotes `PASS: demo1 4227 gametics, trace matches`; `PASS: 1 demo(s)`; `PASS: 4227 gametics == expected 4227` exactly; the check leaves the tree as it found it (`git status --short` saved before and after the three runs, unchanged: yes).
+- **Full harness for this step:** last run as REG-01 in Entry 1 (REG-01-r2 at `432e6797`: 14 pass / 1 fail / 11 not exercised, the fail being `cost` at 57,626 tokens against 51,200). The same task runs again through the harness after integration, in the end-to-end check below.
+- **Review latency:** time for a person to read one report and confirm it is correct: 73 s.
+- **Rubric dimensions that apply:** Evidence and Judgment from `docs/agents/demo-verifier-rubric.md` score the agent's written report.
+
+### After conversion: scripts/verify_demos_deterministic.py, 3 runs
+
+Command, run 3 times in the gimpl container with the repo mounted read-only and no network, at commit `f454c21c`:
+`time python3 scripts/verify_demos_deterministic.py --input eval/demo-verify/check-the-demos.json --output /out/after-N.json`
+
+| Run | Verdict | Wall time (`time`, real) | Cost | Tokens | Quoted the PASS lines exactly |
+|---|---|---|---|---|---|
+| after-1 | PASS | 7.2 s | $0 | 0 | yes |
+| after-2 | PASS | 7.2 s | $0 | 0 | yes |
+| after-3 | PASS | 7.3 s | $0 | 0 | yes |
+| **Mean** | | **7.2 s** | **$0** | **0** | 3/3 |
+
+- **Predictability:** the `decision` object is identical on all 3 runs: yes. Compared with `diff`, the result files differ only in: `commands.cross_check.lines`, `commands.suite.lines`, `evidence.timed`. With the `timed` lines removed they are identical: yes. The `timed` line's realtics vary by timing noise on every replay, which the agent's reports showed too (130 and 132 in Iteration Log Runs 1 and 2).
+- **Quality:** verdict PASS ("1 demo(s) replay tic for tic; cross-check PASS: 4227 gametics == expected 4227"); the agent's verdict on the same input was PASS, agreement: yes. Tree unchanged by the check on all 3 runs: yes. Rebuilt: no. Unit tests: `eval/test_deterministic_step.py` 19 passed in 0.16s.
+- **Review latency:** 48 s to read `decision` in one result file and confirm it.
+
+### Before / after comparison
+
+| Measurement | Before: agent (mean of 3) | After: script (mean of 3) | Change |
+|---|---|---|---|
+| Latency | 29.9 s (Claude Code `duration_ms`) | 7.2 s (`time`, real) | about 4x faster |
+| Cost | $0.1147, 9,168 tokens per run | $0, 0 tokens | all token cost removed |
+| Predictability | verdict same: yes; text same: no | decision same: yes; only the `timed` lines vary | wording variance removed |
+| Audit clarity | agent definition, governance entry and a session transcript to read; free-text report | one standard-library script (277 lines) and a JSON result with named fields and every script line verbatim | fewer artifacts to read |
+| Review latency | 73 s | 48 s | |
+| Quality | verdict PASS; quoted exactly 3/3; tree unchanged yes | verdict PASS; quoted exactly 3/3; tree unchanged yes | no regression: agreement yes |
+| Rubric: Evidence and Judgment wording | scored 1 to 4 | **not applicable**: the script writes no prose to score | not a failure |
+
+**Regression check before touching the ADR:** every check the agent's output passed on this input also passes on the script's output. The only differences are the two rubric dimensions that score prose, which do not apply to structured output.
+
+### End-to-end regression check after integration
+
+System commit `c0ed49a8` (integration commit: `c0ed49a8`). Tasks: HO-02, HO-05, DEV-02, DEV-01, REG-01 (two holdout tasks, two development tasks and the regression task REG-01). The four team-loop tasks were re-scored with the integrated harness (recorded runs, not re-run). REG-01 was run fresh as REG-01-r3, because it is the task the conversion changes: "Check the demos." must now get the script command from the orchestrator instead of a demo-verifier delegation. Every task was scored with `eval/test_deterministic.py` at this commit, with `write=False` so the recorded results files were not overwritten.
+
+| Task | Run scored | Now (pass / fail / not exercised) | Failing now | Logged before the conversion | New failures | Logged failures now passing |
+|---|---|---|---|---|---|---|
+| HO-02 | `.eval-artifacts/runs/holdout/HO-02-r1` | 24 passed, 2 failed, 0 not exercised (26 deterministic checks). | citations_grounded, cost | HO-02-r1, holdout at 432e6797: 24 / 2 / 0, failing citations_grounded, cost | none | none |
+| HO-05 | `.eval-artifacts/runs/holdout/HO-05-r1` | 22 passed, 4 failed, 0 not exercised (26 deterministic checks). | forbidden_paths, citations_grounded, golden_unchanged, cost | HO-05-r1, holdout at 432e6797: 22 / 4 / 0, failing forbidden_paths, golden_unchanged, citations_grounded, cost | none | none |
+| DEV-02 | `.eval-artifacts/runs/dev/DEV-02-r3` | 24 passed, 2 failed, 0 not exercised (26 deterministic checks). | citations_grounded, cost | DEV-02-r3, dev at 432e6797: 24 / 2 / 0, failing citations_grounded, cost | none | none |
+| DEV-01 | `.eval-artifacts/runs/dev/DEV-01-r1` | 24 passed, 2 failed, 0 not exercised (26 deterministic checks). | orchestrator_in_lane, cost | DEV-01-r1, dev, rescored v3: 24 / 2 / 0, failing orchestrator_in_lane, cost | none | none |
+| REG-01 | `.eval-artifacts/runs/dev/REG-01-r3` | 12 passed, 1 failed, 13 not exercised (26 deterministic checks). | cost | REG-01-r2, dev at 432e6797: 14 / 1 / 11, failing cost | none | none |
+
+- **REG-01-r3, the converted path:** subagents invoked: 0. The orchestrator gave the `scripts/verify_demos_deterministic.py` command: yes. The operator then ran that command in the container: verdict PASS ("1 demo(s) replay tic for tic; cross-check PASS: 4227 gametics == expected 4227").
+- **Policy suite** (`eval/test_policy.py`, now including the check that a retired role leaves no artifacts): 93 passed in 1.09s.
+- **Unit tests** (`eval/tests` and `eval/test_deterministic_step.py`, what the Evaluation Harness CI job runs): 306 passed in 3.17s.
+- **Regressions:** none. No check that passed before the conversion fails after it. The `cost` failures on the team-loop tasks are the open budget gap from Entry 1, not caused by this change.
+- **What this check does not show:** the team-loop rows test that the integrated harness, grant maps and policy still score the recorded workflow the same way; they do not test a new orchestration of those tasks unless the mode above says re-run.

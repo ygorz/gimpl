@@ -108,7 +108,7 @@ def test_main_session(cmd, code):
 
 def test_subagent_bash_is_untouched():
     for agent_type, cmd in (("tester", "bash scripts/demo-suite.sh"),
-                            ("demo-verifier", "timeout 300 scripts/demo-suite.sh 2>&1; echo EXIT=$?"),
+                            ("tester", "timeout 300 scripts/demo-suite.sh 2>&1; echo EXIT=$?"),
                             ("tester", "cat docs/smoke-tests/demo-suite-failure-paths.md")):
         assert hook(bash(cmd, agent_id="a204d0f132e476356", agent_type=agent_type))[0] == 0
 
@@ -215,7 +215,7 @@ def test_subagent_file_tools_are_untouched():
                       ("Read", {"file_path": "/workspace/docs/smoke-tests/demo-suite.md"}),
                       ("Grep", {"pattern": "PASS"}),
                       ("Glob", {"pattern": "**/*.md"})):
-        assert hook(tool(name, inp, agent_id="a204d0f132e476356", agent_type="demo-verifier"))[0] == 0
+        assert hook(tool(name, inp, agent_id="a204d0f132e476356", agent_type="tester"))[0] == 0
 
 
 def test_main_session_file_tool_with_agent_type_only_is_still_main():

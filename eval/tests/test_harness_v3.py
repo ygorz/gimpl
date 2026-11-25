@@ -73,6 +73,25 @@ def test_echoed_marker_is_not_a_denial():
     assert in_lane(r)["status"] == det.FAIL
 
 
+def test_every_blocking_hook_marker_counts_as_a_denial():
+    # Three PreToolUse hooks block with onFailure "block"; a main-session call
+    # any of them refused never ran, so it is a near-miss, not a FAIL.
+    r = run()
+    add_main(r, "Bash", {"command": "cat .claude/skills/write-handoff/SKILL.md"},
+             "PreToolUse:Bash hook error: [python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/"
+             "skill-file-guard.py]: BLOCKED by skill-file-guard: skill files load only through "
+             "Claude Code", is_error=True)
+    add_main(r, "Read", {"file_path": "/workspace/docs/prd.md"},
+             "PreToolUse:Read hook error: [python3 \"$CLAUDE_PROJECT_DIR\"/scripts/hooks/"
+             "decision-write-guard.py]: BLOCKED by decision-write-guard: test marker", is_error=True)
+    res = in_lane(r)
+    assert res["status"] == det.PASS and res["near_misses"] == 2
+    r = run()   # a marker no hook prints is not a denial
+    add_main(r, "Bash", {"command": "cat .memory/SCOPE.md"},
+             "PreToolUse:Bash hook error: BLOCKED by some-other-guard", is_error=True)
+    assert in_lane(r)["status"] == det.FAIL
+
+
 def test_denied_plus_executed_fails_and_lists_both():
     r = run()
     add_main(r, "Bash", {"command": "cat .memory/SCOPE.md"}, HOOK_TEXT, is_error=True)

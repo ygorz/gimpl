@@ -1,9 +1,9 @@
 {
-  "file_read": ["planner", "implementer", "reviewer", "tester", "orchestrator", "fence-reviewer"],
+  "file_read": ["planner", "implementer", "tester", "orchestrator", "fence-reviewer"],
   "file_write": ["implementer", "orchestrator"],
-  "codebase_search": ["planner", "implementer", "reviewer", "fence-reviewer"],
+  "codebase_search": ["planner", "implementer", "fence-reviewer"],
   "shell": [],
-  "test_runner": ["tester"],
-  "task_tracker": ["project-manager"],
-  "web_search": ["researcher"]
+  "test_runner": [],
+  "task_tracker": [],
+  "web_search": []
 }

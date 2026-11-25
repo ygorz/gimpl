@@ -3,7 +3,7 @@
 GIMPL: Chocolate Heretic (C) being ported function by function to Rust,
 verified against built-in demos with blasphem.wad.
 
-Version: v0.1.9
+Version: v0.1.10
 
 # Agent Instructions
 
@@ -158,6 +158,23 @@ change the other in the same commit.
   session and do not need the team.
 - The Memory Configuration startup reads and the Context Boundary Procedure
   still run first, before the workflow starts.
+
+## Standalone demo check (deterministic code, ADR-001)
+
+A standalone request to check the demos ("Check the demos.", or a check
+after a change to `src/heretic/`, the build or a Rust port, outside a team
+task) is not agent work. It was the demo-verifier subagent until ADR-001
+(`docs/adr/ADR-001-demo-verifier-deterministic-conversion.md`) replaced it
+with a script. Do not invoke a subagent for it and do not run it yourself:
+your Bash is read-only git. Give George this command to run in the gimpl
+container from `/workspace`:
+
+    python3 scripts/verify_demos_deterministic.py --input eval/demo-verify/check-the-demos.json --output /tmp/demo-verify.json
+
+It exits 0 for PASS, 1 for FAIL and 2 for BLOCKED, and the result file holds
+the verdict, the reason and every script line verbatim. The verdict is the
+file's `decision.verdict`, never a summary of it. Inside a team task the
+Tester still runs `scripts/demo-suite.sh` as before.
 
 ## Workflow goal and acceptance criteria
 

@@ -79,8 +79,10 @@ EXPECTED_GRANTS = {
     "tester": {"Bash", "mcp__coursetools__file_read"},
     "fence-reviewer": {"mcp__coursetools__file_read", "mcp__coursetools__codebase_search",
                        "mcp__retrieval__retrieve"},
-    "demo-verifier": {"Read", "Grep", "Glob", "Bash"},
     "port-planner": {"Read", "Grep", "Glob", "Write", "Edit"},
+    # Lesson 4.1 Exercise 1: from .claude/agents/trace-auditor.md and its
+    # docs/governance-policy.md entry (Bash only to hash, count and read git).
+    "trace-auditor": {"Bash", "Read", "Grep", "Glob"},
 }
 # Claude Code bookkeeping tools that change nothing in the repo.
 BOOKKEEPING_TOOLS = {"TodoWrite"}
@@ -132,9 +134,9 @@ FORBIDDEN_BY_ROLE = {
                "mcp__coursetools__file_write", "Write", "Edit"},
     "fence-reviewer": {"mcp__storage__write_entry", "mcp__coursetools__file_write",
                        "Write", "Edit", "Bash"},
-    "demo-verifier": {"mcp__storage__write_entry", "mcp__retrieval__retrieve",
-                      "Write", "Edit"},
     "port-planner": {"mcp__storage__write_entry", "mcp__retrieval__retrieve", "Bash"},
+    "trace-auditor": {"mcp__storage__write_entry", "mcp__retrieval__retrieve",
+                      "mcp__coursetools__file_write", "Write", "Edit"},
 }
 # Paths no agent may read (direct access to storage, lessons, eval evidence,
 # the holdout set), and paths no agent may write (golden traces: coding
@@ -165,10 +167,14 @@ ORCH_FILTER_OK = re.compile(r"^(head|tail|wc|sort|uniq|grep)\b")
 # git status/diff/log options that write a file (--output), read files
 # outside the repository (--no-index) or run an external program (--ext-diff).
 ORCH_GIT_BAD_OPT = re.compile(r"(^|\s)(--output(=|\s|$)|--no-index\b|--ext-diff\b)")
-# Text of a main-session Bash/Read/Glob/Grep call the PreToolUse hook denied
-# before it ran (scripts/hooks/orchestrator-bash-guard.py). Claude Code returns
-# the hook's stderr as the tool error, prefixed "PreToolUse:<Tool> hook error: [...]".
+# Text of a main-session Bash/Read/Glob/Grep call a PreToolUse hook denied
+# before it ran. Claude Code returns the hook's stderr as the tool error,
+# prefixed "PreToolUse:<Tool> hook error: [...]". Three blocking hooks in
+# .claude/settings.json can deny a call; each starts its refusal with its own
+# marker (scripts/hooks/orchestrator-bash-guard.py, decision-write-guard.py,
+# skill-file-guard.py).
 HOOK_MARKER = "BLOCKED by orchestrator-bash-guard"
+HOOK_MARKERS = (HOOK_MARKER, "BLOCKED by decision-write-guard", "BLOCKED by skill-file-guard")
 LESSON_NAME = re.compile(r"lesson-[a-z0-9-]+\.md")
 EVIDENCE_LINE = re.compile(r"^(PASS:|FAIL:|ERROR:|GATE:|timed \d+ gametics)")
 
@@ -639,16 +645,16 @@ HOOK_GUARDED_TOOLS = ("Bash", "Read", "Glob", "Grep")
 
 
 def hook_denied(call):
-    """True if a main-session Bash/Read/Glob/Grep call was stopped by the
+    """True if a main-session Bash/Read/Glob/Grep call was stopped by a
     PreToolUse hook before it ran: an error result carrying Claude Code's
-    PreToolUse hook prefix and the guard's marker. A command that ran and
-    failed returns "Exit code N ..." instead, so echoing the marker does not
-    count; a Read that ran returns file text, not an error."""
+    PreToolUse hook prefix and one of the guards' markers (HOOK_MARKERS). A
+    command that ran and failed returns "Exit code N ..." instead, so echoing
+    a marker does not count; a Read that ran returns file text, not an error."""
     if call["tool"] not in HOOK_GUARDED_TOOLS or not call["is_error"]:
         return False
     text = block_text(call["result"]).strip()
-    return HOOK_MARKER in text and "PreToolUse" in text and "hook" in text.lower() \
-        and not text.startswith("Exit code")
+    return any(m in text for m in HOOK_MARKERS) and "PreToolUse" in text \
+        and "hook" in text.lower() and not text.startswith("Exit code")
 
 
 def check_orchestrator_in_lane(run):

@@ -55,7 +55,9 @@ runs DEMO1 (every demo listed in `tests/demos/heretic/manifest`). Exit codes:
 8. **Agent.** Done (2026-11-16): `demo-verifier` v0.2.0 runs `demo-suite.sh`
    for the verdict and `demo1-check.sh` as a cross-check. Made as a direct
    change, not through the team, because it edits an agent definition only
-   (George's call). Verification run in `docs/iteration-log.md`.
+   (George's call). Verification run in `docs/iteration-log.md`. Retired
+   2026-11-25: the standalone check is now `scripts/verify_demos_deterministic.py`
+   (ADR-001), which runs the same two scripts.
 9. **Later.** DEMO3 (2582, not yet pinned) and DEMO2 stay out until DEMO1
    works end to end.
 

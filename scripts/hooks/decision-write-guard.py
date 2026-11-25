@@ -26,7 +26,7 @@ held by instruction only.
   (git-ignored). A failed log write never lets the call through.
 - Unreadable hook input or a write with no target path blocks (fail closed).
 - Not covered: Bash. Under scripts/run-agent.sh the roles with Bash (tester,
-  demo-verifier, trace-auditor) run with memory omitted, and the main session's Bash is
+  trace-auditor) run with memory omitted, and the main session's Bash is
   read-only git (orchestrator-bash-guard.py), so Layer 1 holds that path.
 """
 import datetime
