@@ -83,3 +83,4 @@ Expected, not yet measured (no script exists; nothing below is a result):
 To gather before this can be Accepted:
 - Three replays of the recorded HO-05 fence-reviewer handoff and three of DEV-02-r3's, comparing the verdict and the path findings across runs (repeatability).
 - A decision on the approval source for live runs (gap 9), recorded as a decision entry.
+- Pressure test (classification entry): whether any of the three HO-05 replays APPROVEs. Any APPROVE moves the step toward conversion now. Three VIOLATIONS make the pre-check alternative the cheaper fix.

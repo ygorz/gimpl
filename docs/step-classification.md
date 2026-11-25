@@ -103,6 +103,10 @@ The assessment that led to the conversion is kept below as it was scored.
 - **Decision record:** [ADR-002](adr/ADR-002-fence-path-check-deterministic-conversion.md) (Proposed).
 - **Candidate since:** 2026-11-25. **Next review:** after three replays of the HO-05 and DEV-02-r3 fence-reviewer handoffs (the repeatability evidence in ADR-002), or 2026-12-25, whichever comes first.
 
+### Pressure test of the recommendation
+
+The strongest case against "weak candidate", as a reviewer would put it: "You already know the agent fails the case this check exists for. HO-05 approved a self-approved manifest change that the harness's code rule caught. The rule is already code, so waiting for repeatability evidence on an agent you have seen get it wrong leaves a known risk on every team task. A script with test 4 would be right every time." What would settle it is the first item ADR-002 lists to gather. If any of three replays of the HO-05 handoff APPROVEs, the agent is not just unproven but unreliable on the protected-path case, and the step should be re-scored and converted, with the approval-source decision made first. If all three return VIOLATIONS under the current hooks, HO-05 was a one-off. The recommendation then stays weak, and the cheaper fix is the belt-and-braces pre-check.
+
 ### Test plan for `scripts/check_path_fence.py` (planned, not written)
 
 Each test gives the script a temporary git repository with a base commit, a plan file and a change. It asserts the exit code and the `findings` list in the JSON result. The tests would live in `eval/test_path_fence.py`.
