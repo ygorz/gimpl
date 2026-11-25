@@ -596,3 +596,33 @@ Duration, cost and tokens are from Claude Code's JSON result (`duration_ms`, `to
 - **Full harness for this step:** last run as REG-01 in Entry 1 (REG-01-r2 at `432e6797`: 14 pass / 1 fail / 11 not exercised, the fail being `cost` at 57,626 tokens against 51,200). The same task runs again through the harness after integration, in the end-to-end check below.
 - **Review latency:** time for a person to read one report and confirm it is correct: 73 s.
 - **Rubric dimensions that apply:** Evidence and Judgment from `docs/agents/demo-verifier-rubric.md` score the agent's written report.
+
+### After conversion: scripts/verify_demos_deterministic.py, 3 runs
+
+Command, run 3 times in the gimpl container with the repo mounted read-only and no network, at commit `f454c21c`:
+`time python3 scripts/verify_demos_deterministic.py --input eval/demo-verify/check-the-demos.json --output /out/after-N.json`
+
+| Run | Verdict | Wall time (`time`, real) | Cost | Tokens | Quoted the PASS lines exactly |
+|---|---|---|---|---|---|
+| after-1 | PASS | 7.2 s | $0 | 0 | yes |
+| after-2 | PASS | 7.2 s | $0 | 0 | yes |
+| after-3 | PASS | 7.3 s | $0 | 0 | yes |
+| **Mean** | | **7.2 s** | **$0** | **0** | 3/3 |
+
+- **Predictability:** the `decision` object is identical on all 3 runs: yes. Compared with `diff`, the result files differ only in: `commands.cross_check.lines`, `commands.suite.lines`, `evidence.timed`. With the `timed` lines removed they are identical: yes. The `timed` line's realtics vary by timing noise on every replay, which the agent's reports showed too (130 and 132 in Iteration Log Runs 1 and 2).
+- **Quality:** verdict PASS ("1 demo(s) replay tic for tic; cross-check PASS: 4227 gametics == expected 4227"); the agent's verdict on the same input was PASS, agreement: yes. Tree unchanged by the check on all 3 runs: yes. Rebuilt: no. Unit tests: `eval/test_deterministic_step.py` 19 passed in 0.16s.
+- **Review latency:** 48 s to read `decision` in one result file and confirm it.
+
+### Before / after comparison
+
+| Measurement | Before: agent (mean of 3) | After: script (mean of 3) | Change |
+|---|---|---|---|
+| Latency | 29.9 s (Claude Code `duration_ms`) | 7.2 s (`time`, real) | about 4x faster |
+| Cost | $0.1147, 9,168 tokens per run | $0, 0 tokens | all token cost removed |
+| Predictability | verdict same: yes; text same: no | decision same: yes; only the `timed` lines vary | wording variance removed |
+| Audit clarity | agent definition, governance entry and a session transcript to read; free-text report | one standard-library script (277 lines) and a JSON result with named fields and every script line verbatim | fewer artifacts to read |
+| Review latency | 73 s | 48 s | |
+| Quality | verdict PASS; quoted exactly 3/3; tree unchanged yes | verdict PASS; quoted exactly 3/3; tree unchanged yes | no regression: agreement yes |
+| Rubric: Evidence and Judgment wording | scored 1 to 4 | **not applicable**: the script writes no prose to score | not a failure |
+
+**Regression check before touching the ADR:** every check the agent's output passed on this input also passes on the script's output. The only differences are the two rubric dimensions that score prose, which do not apply to structured output.
