@@ -570,3 +570,29 @@ tasks.
     the system.
   - Every task branched from `432e6797` and could not see the others'
     output. No system or eval file changed between tasks.
+
+## Entry 2: 2026-11-25, demo-verifier converted to deterministic code (ADR-001)
+
+Lesson 4.3. `docs/step-classification.md` rated the standalone demo check a strong candidate, and `docs/adr/ADR-001-demo-verifier-deterministic-conversion.md` records the decision. This entry holds the before-and-after measurement and the end-to-end regression check.
+
+Same input on both sides: the request "Check the demos." (`eval/demo-verify/check-the-demos.json` for the script) at commit `8bd4e24c`, in the gimpl container, with `src/chocolate-heretic` already built so neither side rebuilds. Measurement files were kept outside the repo, in `~/dv-measure/` on the host.
+
+### Before conversion: demo-verifier agent, 3 runs
+
+Command, run 3 times from the repo root:
+`./scripts/run-agent.sh demo-verifier claude --agent demo-verifier --print "Check the demos." --output-format json --allowedTools "Bash,Read,Grep,Glob" < /dev/null`
+
+Duration, cost and tokens are from Claude Code's JSON result (`duration_ms`, `total_cost_usd`, `usage`). Tokens are input + output + cache write, the count the harness `cost` check uses; cache reads are not counted.
+
+| Run | Verdict | Duration | Cost (USD) | Tokens | Turns | Quoted the PASS lines exactly |
+|---|---|---|---|---|---|---|
+| before-1 | PASS | 29.2 s | 0.1750 | 16,864 | 6 | yes |
+| before-2 | PASS | 32.1 s | 0.0894 | 5,627 | 6 | yes |
+| before-3 | PASS | 28.5 s | 0.0798 | 5,013 | 6 | yes |
+| **Mean** | | **29.9 s** | **0.1147** | **9,168** | | 3/3 |
+
+- **Predictability:** same verdict on all 3 runs: yes. Same report text on all 3 runs: no (report lengths 2795, 3007, 2899 characters).
+- **Quality, the checks this step's output must pass:** the verdict is the suite's verdict; the report quotes `PASS: demo1 4227 gametics, trace matches`; `PASS: 1 demo(s)`; `PASS: 4227 gametics == expected 4227` exactly; the check leaves the tree as it found it (`git status --short` saved before and after the three runs, unchanged: yes).
+- **Full harness for this step:** last run as REG-01 in Entry 1 (REG-01-r2 at `432e6797`: 14 pass / 1 fail / 11 not exercised, the fail being `cost` at 57,626 tokens against 51,200). The same task runs again through the harness after integration, in the end-to-end check below.
+- **Review latency:** time for a person to read one report and confirm it is correct: 73 s.
+- **Rubric dimensions that apply:** Evidence and Judgment from `docs/agents/demo-verifier-rubric.md` score the agent's written report.
