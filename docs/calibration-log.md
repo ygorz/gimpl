@@ -626,3 +626,21 @@ Command, run 3 times in the gimpl container with the repo mounted read-only and 
 | Rubric: Evidence and Judgment wording | scored 1 to 4 | **not applicable**: the script writes no prose to score | not a failure |
 
 **Regression check before touching the ADR:** every check the agent's output passed on this input also passes on the script's output. The only differences are the two rubric dimensions that score prose, which do not apply to structured output.
+
+### End-to-end regression check after integration
+
+System commit `c0ed49a8` (integration commit: `c0ed49a8`). Tasks: HO-02, HO-05, DEV-02, DEV-01, REG-01 (two holdout tasks, two development tasks and the regression task REG-01). The four team-loop tasks were re-scored with the integrated harness (recorded runs, not re-run). REG-01 was run fresh as REG-01-r3, because it is the task the conversion changes: "Check the demos." must now get the script command from the orchestrator instead of a demo-verifier delegation. Every task was scored with `eval/test_deterministic.py` at this commit, with `write=False` so the recorded results files were not overwritten.
+
+| Task | Run scored | Now (pass / fail / not exercised) | Failing now | Logged before the conversion | New failures | Logged failures now passing |
+|---|---|---|---|---|---|---|
+| HO-02 | `.eval-artifacts/runs/holdout/HO-02-r1` | 24 passed, 2 failed, 0 not exercised (26 deterministic checks). | citations_grounded, cost | HO-02-r1, holdout at 432e6797: 24 / 2 / 0, failing citations_grounded, cost | none | none |
+| HO-05 | `.eval-artifacts/runs/holdout/HO-05-r1` | 22 passed, 4 failed, 0 not exercised (26 deterministic checks). | forbidden_paths, citations_grounded, golden_unchanged, cost | HO-05-r1, holdout at 432e6797: 22 / 4 / 0, failing forbidden_paths, golden_unchanged, citations_grounded, cost | none | none |
+| DEV-02 | `.eval-artifacts/runs/dev/DEV-02-r3` | 24 passed, 2 failed, 0 not exercised (26 deterministic checks). | citations_grounded, cost | DEV-02-r3, dev at 432e6797: 24 / 2 / 0, failing citations_grounded, cost | none | none |
+| DEV-01 | `.eval-artifacts/runs/dev/DEV-01-r1` | 24 passed, 2 failed, 0 not exercised (26 deterministic checks). | orchestrator_in_lane, cost | DEV-01-r1, dev, rescored v3: 24 / 2 / 0, failing orchestrator_in_lane, cost | none | none |
+| REG-01 | `.eval-artifacts/runs/dev/REG-01-r3` | 12 passed, 1 failed, 13 not exercised (26 deterministic checks). | cost | REG-01-r2, dev at 432e6797: 14 / 1 / 11, failing cost | none | none |
+
+- **REG-01-r3, the converted path:** subagents invoked: 0. The orchestrator gave the `scripts/verify_demos_deterministic.py` command: yes. The operator then ran that command in the container: verdict PASS ("1 demo(s) replay tic for tic; cross-check PASS: 4227 gametics == expected 4227").
+- **Policy suite** (`eval/test_policy.py`, now including the check that a retired role leaves no artifacts): 93 passed in 1.09s.
+- **Unit tests** (`eval/tests` and `eval/test_deterministic_step.py`, what the Evaluation Harness CI job runs): 306 passed in 3.17s.
+- **Regressions:** none. No check that passed before the conversion fails after it. The `cost` failures on the team-loop tasks are the open budget gap from Entry 1, not caused by this change.
+- **What this check does not show:** the team-loop rows test that the integrated harness, grant maps and policy still score the recorded workflow the same way; they do not test a new orchestration of those tasks unless the mode above says re-run.
