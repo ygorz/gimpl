@@ -42,7 +42,7 @@ This decision is not accepted until the repeatability and quality evidence liste
   - It gives two answers to one question. HO-05 was the "conflicting reviewers" holdout, and the logged failure was exactly a reviewer resolving a conflict the wrong way.
   - It adds a script and keeps every governance artifact of the old step.
 
-  What would make it the better choice: if three replays of the HO-05 handoff show the agent alternating between APPROVE and VIOLATIONS, the agent is unreliable, and conversion wins. If they show the agent alone flagging real issues the script cannot express, belt and braces wins.
+  What would make it the better choice: if all three replays of the HO-05 handoff return VIOLATIONS, HO-05 looks like a one-off, and this cheaper pre-check is enough. If any replay APPROVEs, the agent is unreliable on the protected-path case, and conversion wins.
 - **Prevent at write time with a hook instead of detecting at review.** A PreToolUse hook would block implementer writes outside the plan's `## Files`, the way `decision-write-guard.py` blocks decision records since HO-05. Not preferred now, because hooks never see the approved plan: it lives in the orchestrator's context, not in a file a hook reads. It would also stop the unplanned-but-kept additions the operator accepted in Feature 1 Task 5, such as the demo-name check. It remains a complement for the golden and manifest paths.
 - **Convert the whole fence-reviewer.** Rejected. Lesson and coding-standard review is judgment (classification entry, "fence-reviewer: scope and lesson review of the diff"), and `citations_grounded` failures on DEV-02 and HO-02 show that half still needs work as an agent.
 
