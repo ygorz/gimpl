@@ -36,6 +36,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # MCP servers (Module 3): coursetools, storage and retrieval.
 # Exact pins live in requirements-mcp.txt so a new release can't break the build.
 COPY requirements-mcp.txt /tmp/requirements-mcp.txt
+# CPU-only PyTorch first, at the version pinned in requirements-mcp.txt, so
+# that pin is already met when the file installs. On x86_64 (the CI runners)
+# PyPI's default torch wheel pulls several GB of CUDA libraries the
+# retrieval server never uses; on linux/arm64 the PyPI wheel is CPU-only
+# already, so local builds get the same CPU build either way.
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
+        "$(grep -E '^torch==' /tmp/requirements-mcp.txt)"
 RUN pip install --no-cache-dir -r /tmp/requirements-mcp.txt
 
 # Bake the embedding model into the image. Builds and checks run with no
