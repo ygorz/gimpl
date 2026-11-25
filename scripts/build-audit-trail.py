@@ -9,7 +9,8 @@ and calls this script with each job's result from the needs context:
         --sha <sha> --event pull_request --pr 12 --run-id <id> --run-url <url> \\
         --changed-files "a b c" --requires-eval true --touches-policy false \\
         --result change-type-check=success --result policy-gate=success \\
-        --result eval-gate=success --result agent-review=success
+        --result eval-gate=success --result agent-review=success \\
+        --result pipeline-integrity=success
 
 Every job ends in exactly one of these states, so an auditor can tell a
 job that failed from one that had nothing to do:
@@ -19,10 +20,17 @@ job that failed from one that had nothing to do:
 - not_triggered  the job ran but had nothing to check: the classifier found
                  no agent-affecting change, or the job runs on pull requests
                  only and this was a push
-- skipped        the job did not run because a job it needs failed, or it
-                 ran and recorded a skip (the advisory reviewer with no key)
+- skipped        the job did not run because a job it needs failed or its
+                 own if: was false, or it ran and recorded a skip (the
+                 advisory reviewer with no key)
 - cancelled      the run was cancelled before the job finished
 - missing        no result was passed for the job
+
+A job's result alone is not trusted for a gate. If a gating job reports
+success but its own report records a failure (a pytest report with a
+non-zero exit code, or "status": "failed"), or it uploaded no report at
+all, the trail records the job as failed and says why. That is what keeps
+a gate demoted with continue-on-error from appearing as "passed" here.
 
 The script reads only the files in --artifacts and its own arguments. It
 never reads the environment, so no secret can reach the trail, and it masks
@@ -46,8 +54,9 @@ REPORTS = {
     "policy-gate": "policy-report.json",
     "eval-gate": "eval-report.json",
     "agent-review": "review-audit.json",
+    "pipeline-integrity": "pipeline-integrity-report.json",
 }
-GATING = {"policy-gate", "eval-gate"}
+GATING = {"policy-gate", "eval-gate", "pipeline-integrity"}
 ORDER = list(REPORTS)
 
 # Backstop only: nothing should ever put a key in an artifact.
@@ -75,15 +84,21 @@ def job_state(job: str, result: str, report, event: str) -> tuple[str, str]:
     if result == "cancelled":
         return "cancelled", "the run was cancelled before the job finished"
     if result == "failure":
-        return "failed", "the job failed; see its report and log"
+        reason = report.get("reason") if isinstance(report, dict) else None
+        return "failed", reason or "the job failed; see its report and log"
     if result == "skipped":
         if job == "agent-review" and event != "pull_request":
             return "not_triggered", "runs on pull requests only"
-        return "skipped", "did not run because a job it needs did not succeed"
+        return "skipped", "did not run: a job it needs did not succeed, or its own if: was false"
     if result != "success":
         return "missing", f"unrecognized result {result!r}"
     if job == "agent-review" and not isinstance(report, dict):
         return "failed", "the advisory review uploaded no review-audit.json"
+    if job in GATING and not isinstance(report, dict):
+        return "failed", f"the gate reported success but uploaded no {REPORTS[job]}"
+    if isinstance(report, dict) and "exitcode" in report and report.get("exitcode") != 0:
+        return "failed", (f"the job reported success but its pytest report exited {report.get('exitcode')}; "
+                          "a continue-on-error may be hiding the failure")
     status = report.get("status") if isinstance(report, dict) else None
     if status == "not_triggered":
         return "not_triggered", report.get("reason", "nothing to check")
@@ -125,6 +140,28 @@ def mask(text: str) -> tuple[str, int]:
     return KEY_PATTERN.subn("[MASKED]", text)
 
 
+def integrity_summary(report) -> dict | None:
+    """The integrity checks, one entry per check, for the trail."""
+    if not isinstance(report, dict):
+        return None
+    return {
+        "status": report.get("status"),
+        "reason": report.get("reason"),
+        "workflow_sha256": report.get("workflow_sha256"),
+        "failed_checks": report.get("failed_checks", []),
+        "not_run_checks": report.get("not_run_checks", []),
+        "checks": [{"id": c.get("id"), "status": c.get("status"), "findings": c.get("findings", [])}
+                   for c in report.get("checks", []) if isinstance(c, dict)],
+    }
+
+
+def integrity_line(summary) -> str:
+    if not summary:
+        return "Pipeline integrity: no pipeline-integrity-report.json in this run"
+    checks = ", ".join(f"{c['id']} {c['status']}" for c in summary["checks"])
+    return f"Pipeline integrity: **{summary['status']}** ({checks})"
+
+
 def summary_markdown(trail: dict) -> str:
     icons = {"passed": "✅", "failed": "❌", "not_triggered": "➖", "skipped": "⏭️",
              "cancelled": "🚫", "missing": "❔"}
@@ -149,6 +186,7 @@ def summary_markdown(trail: dict) -> str:
         f"touches-policy: `{json.dumps(cls['touches_policy'])}` · "
         f"changed files: {len(cls['changed_files'])}",
         f"Authorization denials recorded: {len(trail['authorization_denials'])}",
+        integrity_line(trail["pipeline_integrity"]),
         "",
         f"Full trail: artifact `audit-trail` (`ci-audit-trail-{meta['sha']}.json`).",
     ]
@@ -224,6 +262,7 @@ def main() -> int:
         "policy_results": pytest_summary(policy_report),
         "harness_results": eval_report if isinstance(eval_report, dict) else None,
         "harness_tests": pytest_summary(load_json(artifacts / "eval-tests-report.json")),
+        "pipeline_integrity": integrity_summary(load_json(artifacts / REPORTS["pipeline-integrity"])),
         "agent_actions": {
             "advisory_review": load_json(artifacts / REPORTS["agent-review"]),
             "note": "No CI job runs an agent session; the advisory reviewer is the only model call.",

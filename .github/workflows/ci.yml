@@ -1,6 +1,7 @@
 # GIMPL governed CI pipeline (Module 4.2). Design and classification of
 # every job: docs/ci-step-design.md. eval/test_policy.py checks this file
-# against that design on every run.
+# against that design on every run, and pipeline-integrity checks the
+# file's own guardrails in a job that depends on no other job.
 #
 # No paths: filter on the triggers. The workflow runs on every pull request
 # and every push to master; change-type-check decides inside the run which
@@ -45,7 +46,7 @@ jobs:
           # launcher, the policy and grant map, CLAUDE.md and the image itself.
           REQUIRES_EVAL_RE='^(\.claude/agents/|\.claude/skills/|\.claude/settings\.json|\.mcp\.json|mcp/|eval/|scripts/hooks/|scripts/run-agent\.sh|scripts/run-eval-gate\.py|docs/governance-policy\.md|docs/routing-and-tool-grant-map\.md|CLAUDE\.md|Dockerfile|docker-entrypoint\.sh|requirements-(ci|mcp)\.txt)'
           # Paths that grant or limit access, or change the checks that guard it.
-          TOUCHES_POLICY_RE='^(docs/governance-policy\.md|mcp/.*allow-?list\.json|scripts/run-agent\.sh|scripts/hooks/|\.claude/agents/|\.claude/skills/|\.claude/settings\.json|eval/test_policy\.py|\.github/workflows/)'
+          TOUCHES_POLICY_RE='^(docs/governance-policy\.md|mcp/.*allow-?list\.json|scripts/run-agent\.sh|scripts/hooks/|\.claude/agents/|\.claude/skills/|\.claude/settings\.json|eval/test_policy\.py|scripts/check-pipeline-integrity\.py|\.github/workflows/)'
 
           if [ "$EVENT_NAME" = "pull_request" ]; then
             BASE="$PR_BASE_SHA"
@@ -276,11 +277,72 @@ jobs:
           retention-days: 90
           if-no-files-found: ignore
 
+  # gating, permanent: checks this file's own guardrails; no needs:, so it runs whatever the other jobs do
+  pipeline-integrity:
+    name: Pipeline Integrity Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The checker parses ci.yml with PyYAML, at the version pinned in requirements-ci.txt.
+      - name: Install PyYAML
+        run: python3 -m pip install --disable-pip-version-check --no-cache-dir PyYAML==6.0.4
+
+      # One step per guardrail, so a failure names the guardrail it came from.
+      # success() || failure(): every check still runs after an earlier one fails.
+      - name: "Check 1: gates have no continue-on-error"
+        id: check-gates
+        run: python3 scripts/check-pipeline-integrity.py --check gates --annotate
+
+      - name: "Check 2: audit-trail keeps if: always()"
+        id: check-audit
+        if: success() || failure()
+        run: python3 scripts/check-pipeline-integrity.py --check audit --annotate
+
+      - name: "Check 3: change-type-check classifier exists"
+        id: check-classifier
+        if: success() || failure()
+        run: python3 scripts/check-pipeline-integrity.py --check classifier --annotate
+
+      - name: "Check 4: pipeline-integrity stays independent"
+        id: check-self
+        if: success() || failure()
+        run: python3 scripts/check-pipeline-integrity.py --check self --annotate
+
+      - name: Write pipeline integrity report
+        if: always()
+        env:
+          OUTCOME_GATES: ${{ steps.check-gates.outcome }}
+          OUTCOME_AUDIT: ${{ steps.check-audit.outcome }}
+          OUTCOME_CLASSIFIER: ${{ steps.check-classifier.outcome }}
+          OUTCOME_SELF: ${{ steps.check-self.outcome }}
+        run: |
+          python3 scripts/check-pipeline-integrity.py \
+            --report ci-artifacts/pipeline-integrity-report.json \
+            --step-outcome "gates=$OUTCOME_GATES" \
+            --step-outcome "audit=$OUTCOME_AUDIT" \
+            --step-outcome "classifier=$OUTCOME_CLASSIFIER" \
+            --step-outcome "self=$OUTCOME_SELF"
+
+      - name: Upload pipeline integrity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-integrity-report
+          path: ci-artifacts/pipeline-integrity-report.json
+          retention-days: 90
+          if-no-files-found: ignore
+
   # informational: always runs and records every job's state, including failures and skips
   audit-trail:
     name: Audit Trail
     runs-on: ubuntu-latest
-    needs: [change-type-check, policy-gate, eval-gate, agent-review]
+    needs: [change-type-check, policy-gate, eval-gate, agent-review, pipeline-integrity]
     if: always()
     timeout-minutes: 5
     permissions:
@@ -312,6 +374,7 @@ jobs:
           RESULT_POLICY: ${{ needs.policy-gate.result }}
           RESULT_EVAL: ${{ needs.eval-gate.result }}
           RESULT_REVIEW: ${{ needs.agent-review.result }}
+          RESULT_INTEGRITY: ${{ needs.pipeline-integrity.result }}
         run: |
           python3 scripts/build-audit-trail.py \
             --artifacts ci-artifacts \
@@ -326,7 +389,8 @@ jobs:
             --result "change-type-check=$RESULT_CLASSIFIER" \
             --result "policy-gate=$RESULT_POLICY" \
             --result "eval-gate=$RESULT_EVAL" \
-            --result "agent-review=$RESULT_REVIEW"
+            --result "agent-review=$RESULT_REVIEW" \
+            --result "pipeline-integrity=$RESULT_INTEGRITY"
           cat ci-audit-trail-summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload audit trail
