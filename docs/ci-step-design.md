@@ -53,7 +53,7 @@ A gate's own result is not taken on trust. When a gating job reports success but
 - **Input:** The git diff between the pull request's base commit and the merge commit (or, on a push to `master`, between the previous and new head), from a full-history checkout (`fetch-depth: 0`).
 - **Produces:** Job outputs `changed-files`, `requires-eval` and `touches-policy`, and the artifact `change-classification.json` with the base and head commits and both flags.
   - `requires-eval` is `true` when a change touches agent behaviour or the checks around it: `.claude/agents/`, `.claude/skills/`, `.claude/settings.json`, `.mcp.json`, `mcp/`, `eval/`, `scripts/hooks/`, `scripts/run-agent.sh`, `scripts/run-eval-gate.py`, `docs/governance-policy.md`, `docs/routing-and-tool-grant-map.md`, `CLAUDE.md`, or the image (`Dockerfile`, `docker-entrypoint.sh`, `requirements-ci.txt`, `requirements-mcp.txt`).
-  - `touches-policy` is `true` when a change touches a file that grants or limits access, or the checks that guard it: `docs/governance-policy.md`, the MCP allow-lists, `scripts/run-agent.sh`, `scripts/hooks/`, the agent, skill and settings files under `.claude/`, `eval/test_policy.py` and `.github/workflows/`.
+  - `touches-policy` is `true` when a change touches a file that grants or limits access, or the checks that guard it: `docs/governance-policy.md`, the MCP allow-lists, `scripts/run-agent.sh`, `scripts/hooks/`, the agent, skill and settings files under `.claude/`, `eval/test_policy.py`, `scripts/check-pipeline-integrity.py` and `.github/workflows/`.
   - If the diff cannot be computed, both flags are set to `true`, so the classifier fails safe and the eval gate runs.
 - **Classification:** informational; never blocks. It only routes work. A wrong `false` is the risk it must avoid, which is why it fails safe, and `eval/test_policy.py` checks that every file the policy suite treats as enforcement sets `requires-eval`.
 - **Time limit:** 2 minutes.
@@ -65,7 +65,7 @@ A gate's own result is not taken on trust. When a gating job reports success but
 - **Does:** Runs `eval/test_policy.py`, which fails wherever `docs/governance-policy.md` and the artifacts that enforce it disagree, and wherever `ci.yml` disagrees with this design.
 - **Input:** The whole repository: the policy document; `mcp/storage/allow-list.json`, `mcp/retrieval/allow-list.json` and the `_authorize()` guard in both servers; the agent files in `.claude/agents/` and `.claude/settings.json`; the case block in `scripts/run-agent.sh` (run in dry-run mode); and `.github/workflows/ci.yml` with this document.
 - **Produces:** `policy-report.json` (pytest JSON report, one entry per check), uploaded as the `policy-report` artifact, and the job's pass or fail status.
-- **Classification:** gating, permanent. The checks are deterministic, need no model and no secret, and a failure always means the written policy and the real enforcement have drifted apart. Nothing else should run on that foundation, so every other job except the classifier waits for it. It is never advisory and never demoted: no `continue-on-error`, no job-level `if:` and no path filter. Branch protection on `master` lists **Policy Test Suite** as a required status check.
+- **Classification:** gating, permanent. The checks are deterministic, need no model and no secret, and a failure always means the written policy and the real enforcement have drifted apart. Nothing that depends on a sound policy should run on that foundation, so eval-gate and agent-review wait for it. pipeline-integrity does not, because it must still report if this gate is demoted or skipped. It is never advisory and never demoted: no `continue-on-error`, no job-level `if:` and no path filter. Branch protection on `master` lists **Policy Test Suite** as a required status check.
 - **Time limit:** 5 minutes for the test step. The job is capped at 10 minutes, which includes building the image.
 - **Credentials:** none.
 - **Verified:** PR #1: passed, in 7 minutes on the first run with no layer cache and about 1 minute once the cache was warm. Commit `b4c6ada9` deliberately changed `write_entry` to `delete_entry` in `mcp/storage/allow-list.json`. Policy Test Suite failed, eval-gate and agent-review were skipped because they need it, and the audit trail still ran and recorded `overall: failed`. The revert, `50f6ad7d`, returned the run to green.
@@ -147,6 +147,7 @@ A gate's own result is not taken on trust. When a gating job reports success but
     - In scenario 2 the audit trail recorded the four skipped jobs as `skipped`, and a skipped gate makes `overall` `failed`.
     - pipeline-integrity never reports `not_triggered`, because its checks apply to every change. A check that cannot be evaluated is `not_run`. Run locally with `--workflow /dev/null`, the checker printed `pipeline-integrity: failed (not evaluated: gates, audit, classifier, self)` and the report had `"status": "failed"`.
   - **Revert.** PR #3, commit `c2e8f165`; audit comment on `58a9c936`. The audit trail recorded `overall: passed`, `eval-gate` as `not_triggered`, `agent-review` as skipped, and `pipeline-integrity` as passed on all four checks. The merge box showed "All checks have passed" with 6 successful checks. PR #3 was then closed without merging, and the branch was deleted.
+  - **Recorded.** PR #4 (`m4/ci-verify-doc`, merged as `c998f449`) added this Verified field. The audit comment on `763c7936` recorded `overall: passed`, `eval-gate` as `not_triggered`, and `pipeline-integrity` as passed (one file changed). All six CI checks were green.
 
 ## Audit trail (`audit-trail`)
 
@@ -167,7 +168,7 @@ A gate's own result is not taken on trust. When a gating job reports success but
 
 ## Branch protection
 
-The `master` branch rule requires a pull request, with no approval count because the repository has one maintainer, and these status checks: **Change Classifier**, **Policy Test Suite**, **Evaluation Harness** and **Pipeline Integrity Check**.
+The `master` branch rule requires a pull request, with no approval count because the repository has one maintainer, and these status checks: **Change Classifier**, **Policy Test Suite**, **Evaluation Harness** and **Pipeline Integrity Check**. **Do not allow bypassing the above settings** is checked, so the same block applies to the administrator.
 
 - Required checks are matched by name. If a pull request deletes or renames one of these jobs, the check stays "Expected" and the merge is blocked. That is why Change Classifier is required even though it only routes work.
 - GitHub counts a **skipped** required check as passing. So no gate may carry a job-level `if:`, and pipeline-integrity needs no other job. A gate skipped because something upstream was switched off would otherwise satisfy branch protection.
