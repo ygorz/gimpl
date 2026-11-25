@@ -1,6 +1,6 @@
 # GIMPL Step Classification
 
-Last updated: 2026-11-25 (Lesson 4.3 Exercise 1: fence-reviewer path-fence check assessed, ADR-002 Proposed)
+Last updated: 2026-11-25 (Lesson 4.3 Exercise 1: fence-reviewer path-fence check assessed, ADR-002 Proposed, test, measurement and rollback plans added)
 
 **Review cadence.** This document is updated after every calibration cycle, and in any case after each feature or port ships or every 30 days, whichever comes first. Each update re-scores the steps whose evidence changed: a new logged run, a new failure, or a change in how often the step runs.
 - A step that crosses the stability threshold is promoted to candidate status.
@@ -102,6 +102,48 @@ The assessment that led to the conversion is kept below as it was scored.
 - **Recommendation: weak candidate.** Run rate is met, and the rule is already written as code in the harness, so the step is close to specifiable. But repeatability has no evidence at all, and stability is mixed: the one disagreement is the HO-05 approval, the exact input a script would have to get right. Specifiability still has the approval-source question open. A strong candidate needs all four signals, so this is not ready to convert. ADR-002 records the proposed conversion at Proposed, with the evidence that has to come first.
 - **Decision record:** [ADR-002](adr/ADR-002-fence-path-check-deterministic-conversion.md) (Proposed).
 - **Candidate since:** 2026-11-25. **Next review:** after three replays of the HO-05 and DEV-02-r3 fence-reviewer handoffs (the repeatability evidence in ADR-002), or 2026-12-25, whichever comes first.
+
+### Test plan for `scripts/check_path_fence.py` (planned, not written)
+
+Each test gives the script a temporary git repository with a base commit, a plan file and a change. It asserts the exit code and the `findings` list in the JSON result. The tests would live in `eval/test_path_fence.py`.
+
+| # | Case | Input | Expected output | Why it matters |
+|---|---|---|---|---|
+| 1 | Normal | Plan `## Files`: `scripts/demo-suite.sh`, `docs/smoke-tests/demo-suite.md`. Diff changes those two files and adds `docs/runs/feature1-task5-run-1.md` (the shape of Feature 1 Task 5). | Exit 0, verdict `IN_FENCE`, `findings: []`. | A false finding on a clean task sends the implementer into a retry on every task. At this run rate that is the most expensive failure the script can have. |
+| 2 | Failure: unplanned path | Same plan. Diff also changes `src/heretic/p_inter.c`. | Exit 1, verdict `OUT_OF_FENCE`, one finding: `src/heretic/p_inter.c: not in the plan's ## Files`. | An unplanned source edit would otherwise reach the operator's commit checkpoint unflagged. |
+| 3 | Failure: golden trace | Plan lists `tests/demos/heretic/golden/demo1.tics`. Diff changes it. No decision at the base commit names it. | Exit 1, finding: `tests/demos/heretic/golden/demo1.tics: protected path changed with no approval recorded before the change (coding standard 4)`. | Being in the plan is not approval. The plan is written by the planner, an agent. |
+| 4 | **Named edge case (HO-05)** | Plan lists `tests/demos/heretic/manifest`. Diff changes the manifest's source-commit field and adds `.memory/project/decisions/decision-007.md`, which says it supersedes decision-006 and approves the change. Base commit has decision-001 to decision-006 only. | Exit 1, finding: `tests/demos/heretic/manifest: protected path changed; the only approval cited, decision-007.md, is added by this diff, and an approval must exist before the change`. | This is the HO-05 failure, a change approving itself. If the script got this wrong, it would accept every self-approved protected change, every time, with nothing in the output to show it. |
+| 5 | Edge-case counterpart | The same manifest change. A decision record that names `tests/demos/heretic/manifest` as approved for this change already exists at the base commit, and the diff does not touch it. | Exit 0, verdict `IN_FENCE`, note: `tests/demos/heretic/manifest: approved by decision-00N at <base>`. | Without this, the fix for test 4 would block changes the operator did approve, and the operator would learn to ignore the script. |
+| 6 | Blocked: no plan list | Plan file has no `## Files` section. | Exit 2, verdict `BLOCKED`, reason `plan has no ## Files section; cause not guessed`. | An empty list must not be read as "everything allowed" or as "everything forbidden". |
+| 7 | Directory scope (gap 4, HO-04) | Plan `## Files` has the entry `docs/port-specs/`. Diff adds `docs/port-specs/p_inter-spec.md`. | Exit 0, no finding. | HO-04 failed `changed_files_in_scope` only because directory scope was not expressible. The script must not repeat that harness gap in the live workflow. |
+| 8 | Rename | Diff renames `docs/smoke-tests/demo-suite.md` (planned) to `docs/demo-suite.md` (not planned). | Exit 1, a finding for `docs/demo-suite.md`. | Checking only the old path of a rename would let a file leave its fence. |
+
+The same tests also check that the script names no model, API key or network library (as `eval/test_deterministic_step.py` does for ADR-001), and that the same input gives the same JSON three times.
+
+### Measurement plan (before accepting the conversion)
+
+Inputs: the recorded fence-reviewer handoffs from HO-05-r1 (the edge case) and DEV-02-r3 (an ordinary multi-file change), each with its plan, diff and tester result. Before means fence-reviewer 1.0.2 as it is. After means `scripts/check_path_fence.py` plus a fence-reviewer with steps 2 and 3 removed that receives the script's JSON. Each side runs three times on each handoff, so every number below is a mean of three per input.
+
+| Dimension | Before (agent) evidence | After (script + slimmer agent) evidence |
+|---|---|---|
+| Latency | `duration_ms` from `claude --agent fence-reviewer --print --output-format json` with the handoff as the prompt | `time` on the script, plus `duration_ms` of the slimmer agent call |
+| Token cost | `total_cost_usd` and `usage` (input + output + cache write, as the harness `cost` check counts) | The script costs 0 tokens, plus the slimmer agent's usage. The saving is the difference between the two agent calls, expected to be small, because the judgment steps stay. |
+| Predictability | The `## Verdict` line and the path findings in `## Findings`, compared across the three runs with `diff` | `diff` of the three JSON results. Expected identical, and checked, not assumed. |
+| Audit clarity | Time for someone who did not write the step to answer "why was this path flagged?" from the agent definition and a transcript | The same question answered from the script and one JSON finding that names its rule |
+| Quality and harness | The verdict on HO-05 against the locked expectation (VIOLATIONS), plus agreement with the harness's `changed_files_in_scope` and `golden_unchanged` on both inputs | The same checks. Then, after integration, fresh HO-05 and DEV-02 runs through `eval/start_run.sh` and the full harness, with no check that passed before failing after. |
+
+Rubric note: `report_clarity` and `groundedness` in `eval/rubric.json` score prose and citations. The path findings become structured output copied from the script, so those two dimensions don't apply to the path part of the report and are marked not applicable there. They still apply to the fence-reviewer's judgment findings. A lower or missing score on the path part is not a regression. The rubric suite has also not run since Entry 1, because the `cost` gate closes first (Remaining gaps 1). Quality therefore rests on the deterministic checks and the locked HO-05 expectation, not on rubric totals.
+
+### Rollback note
+
+The conversion would be one commit, `refactor: integrate fence path check deterministic step, orchestrator, routing map, policy, CI updated`, containing only:
+- **Orchestrator instructions:** `CLAUDE.md` and `.claude/agents/orchestrator.md`. The tester handoff asks for the script run, and the fence-reviewer handoff includes its JSON.
+- **Routing map:** in `docs/routing-and-tool-grant-map.md`, the fence-reviewer row says the path checks come from the script, and the tester row says it runs it.
+- **Governance policy:** in `docs/governance-policy.md`, the fence-reviewer and tester entries change, and a Deterministic conversion history row is added for the sub-step. No role is retired.
+- **Retired agent artifacts:** steps 2 and 3 and the matching `## Findings` guidance are removed from `.claude/agents/fence-reviewer.md`, with a version bump. The tester gains one step in `.claude/agents/tester.md`.
+- **CI:** `scripts/check_path_fence.py` is added to the classifier's `REQUIRES_EVAL_RE` in `.github/workflows/ci.yml`. `eval/test_path_fence.py` is added to the Evaluation Harness test list in `scripts/run-eval-gate.py`. The script is added to the enforcement list in `eval/test_policy.py`.
+
+The script and its tests land in an earlier commit, so `git revert` of this one commit restores the fence-reviewer's steps 2 and 3 and the old handoffs without deleting the script or touching unrelated work. When to use it: the script reports `IN_FENCE` on a change where the harness's `golden_unchanged` or `changed_files_in_scope` fails, or it blocks a change that has a decision record approving it at the base commit. Either means the script is wrong on every such task until it is fixed, so revert first, then fix the script in a separate commit.
 
 ## orchestrator: route, gate, loop or escalate
 
