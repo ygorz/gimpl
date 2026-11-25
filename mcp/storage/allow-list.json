@@ -1,5 +1,5 @@
 {
-  "write_entry": ["implementer"],
+  "delete_entry": ["implementer"],
   "read_entry": [],
   "list_entries": [],
   "update_entry": [],
