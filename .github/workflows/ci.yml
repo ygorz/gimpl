@@ -20,6 +20,7 @@ jobs:
   # informational: lists the changed files and sets the flags later jobs read
   change-type-check:
     name: Change Classifier
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
