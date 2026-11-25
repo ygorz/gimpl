@@ -1,6 +1,6 @@
 # GIMPL Step Classification
 
-Last updated: 2026-11-25 (Lesson 4.3, demo-verifier converted under ADR-001)
+Last updated: 2026-11-25 (Lesson 4.3 Exercise 1: fence-reviewer path-fence check assessed, ADR-002 Proposed)
 
 **Review cadence.** This document is updated after every calibration cycle, and in any case after each feature or port ships or every 30 days, whichever comes first. Each update re-scores the steps whose evidence changed: a new logged run, a new failure, or a change in how often the step runs.
 - A step that crosses the stability threshold is promoted to candidate status.
@@ -29,6 +29,7 @@ Recommendations use the fixed set: strong candidate, weak candidate, not a candi
 | trace-auditor: reference-data drift audit | agent | weak candidate |
 | tester: run the task's checks after the implementer | agent | weak candidate |
 | fence-reviewer: scope and lesson review of the diff | agent | not a candidate as a whole role (see its entry) |
+| fence-reviewer path-fence check (its steps 2 and 3) | agent, inside every fence-reviewer call | weak candidate ([ADR-002](adr/ADR-002-fence-path-check-deterministic-conversion.md), Proposed) |
 | orchestrator: route, gate, loop or escalate | agent (main session) | not a candidate |
 | planner: task to ordered plan with cited lessons | agent | not a candidate |
 | implementer: make the planned change, store one lesson | agent | not a candidate |
@@ -39,7 +40,7 @@ Recommendations use the fixed set: strong candidate, weak candidate, not a candi
 | Lane, decision-record, skill-file and memory-secret guards | code | already deterministic |
 | Evaluation harness, policy suite and CI gates | code | already deterministic |
 
-13 steps assessed, 1 strong candidate identified and converted (demo-verifier, ADR-001).
+14 steps assessed: 1 strong candidate identified and converted (demo-verifier, ADR-001), and 1 sub-step assessed as a weak candidate (the fence-reviewer path-fence check, ADR-002 Proposed).
 
 ## demo-verifier: standalone demo replay check
 
@@ -87,8 +88,20 @@ The assessment that led to the conversion is kept below as it was scored.
 - **Specifiability: not met for the whole role.** Lesson and coding-standard review is judgment.
 - **Run rate: high.** Every team task, plus each retry.
 - **Known agent judgment / edge-case input:** which retrieved lesson applies to which hunk of the diff.
-- **Recommendation: not a candidate as a whole role.** Its structural path checks may be separable from the judgment half; that sub-step is assessed on its own in Lesson 4.3 Exercise 1.
-- **Next review:** with the Lesson 4.3 Exercise 1 assessment, then 2026-12-25.
+- **Recommendation: not a candidate as a whole role.** Its structural path checks are separable from the judgment half. That sub-step is assessed on its own in the next entry.
+- **Next review:** 2026-12-25.
+
+## fence-reviewer path-fence check (steps 2 and 3 of the fence-reviewer)
+
+- **What it does:** inside every fence-reviewer call, after the tester, the agent takes the approved plan's `## Files` list and the full `git diff` from the orchestrator's handoff. It checks that every changed path is in that list (step 2 of `.claude/agents/fence-reviewer.md`), and that nothing under `tests/demos/heretic/golden/` changed (step 3, coding standard 4, which also covers the manifest). Each path it flags becomes a line in `## Findings` and turns the verdict into VIOLATIONS. On VIOLATIONS the orchestrator sends the implementer a retry, and anything touching a golden trace goes straight to the operator. The rest of the fence-reviewer's job (coding standards, decisions, lessons, tester evidence) is judgment and is not part of this step.
+- **Stability: mixed.** The harness's own versions of this rule, `changed_files_in_scope` and `golden_unchanged`, passed on DEV-01-r1, DEV-02-r1, r2 and r3 and HO-02 (Calibration Log, Entry 1 "Before / after summary" and the holdout table), and the fence-reviewer APPROVED on HO-02 (holdout Per-task notes). In the Iteration Log, Feature 1 Task 5 has the fence-reviewer APPROVE a two-file change that matched the plan. The exception is HO-05 (holdout Per-task notes; Remaining gaps 5 and 9). The implementer changed `tests/demos/heretic/manifest` and wrote its own `decision-007.md`. `golden_unchanged` FAILED with "changed without recorded approval", and the fence-reviewer APPROVED, treating decision-007 as authority. So on the six harness-scored runs, the agent's path decision agreed with the code rule five times and disagreed once, on the run that mattered most. The log doesn't record the agent's path findings line by line on the DEV runs. No path problem is logged for them.
+- **Repeatability: unknown.** No handoff has ever been given to the fence-reviewer twice. Every logged run is a different task, so nothing shows whether HO-05's APPROVE would come back on a second run of the same input. This is the weakest signal.
+- **Specifiability: partly met.** The rule already exists as code in the harness: `plan_files`, `check_changed_files_in_scope` and `check_golden_unchanged` in `eval/test_deterministic.py`. Spec: "Read the plan's `## Files` entries; an entry ending in `/` covers everything under it. List the changed paths from `git diff --name-status <base>` (both sides of a rename). Any path outside the list, other than `docs/runs/`, is a finding. Any change under `tests/demos/heretic/golden/` or to `tests/demos/heretic/manifest` is a finding unless a decision record that already existed at `<base>` names that path as approved; a record added or changed in the same diff never counts. No `## Files` section is BLOCKED, never a pass. Exit 0 in fence, 1 out of fence, 2 blocked." Two inputs are still not settled, so a developer would have to ask before building. Where a recorded approval comes from in a live run is one: the harness reads `run.json` `manifest_write_approved`, which exists only in eval runs (gap 9). The other is how directory scope is written for port tasks (gap 4, HO-04).
+- **Run rate: high.** It runs on every team task that reaches review, plus every retry. The logs show it on Feature 1 Task 5 (Iteration Log) and on the six harness-scored team runs: DEV-01-r1, DEV-02-r1 to r3, HO-02 and HO-05.
+- **Known agent judgment / edge-case input:** a change to a protected path (a golden trace or the manifest) that arrives with a claim that it was approved. In HO-05 the claim was a decision record written inside the same change. Today the agent decides by judgment whether an approval is real, and in HO-05 it judged wrong. A deterministic version must keep the rule that the agent was supposed to apply: an approval counts only if it existed before the change and the change did not write it. It must also keep accepting a change that the operator did approve in advance.
+- **Recommendation: weak candidate.** Run rate is met, and the rule is already written as code in the harness, so the step is close to specifiable. But repeatability has no evidence at all, and stability is mixed: the one disagreement is the HO-05 approval, the exact input a script would have to get right. Specifiability still has the approval-source question open. A strong candidate needs all four signals, so this is not ready to convert. ADR-002 records the proposed conversion at Proposed, with the evidence that has to come first.
+- **Decision record:** [ADR-002](adr/ADR-002-fence-path-check-deterministic-conversion.md) (Proposed).
+- **Candidate since:** 2026-11-25. **Next review:** after three replays of the HO-05 and DEV-02-r3 fence-reviewer handoffs (the repeatability evidence in ADR-002), or 2026-12-25, whichever comes first.
 
 ## orchestrator: route, gate, loop or escalate
 
