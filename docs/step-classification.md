@@ -1,6 +1,12 @@
 # GIMPL Step Classification
 
-Last updated: 2026-11-25 (Lesson 4.3, first pass)
+Last updated: 2026-11-25 (Lesson 4.3, demo-verifier converted under ADR-001)
+
+**Review cadence.** This document is updated after every calibration cycle, and in any case after each feature or port ships or every 30 days, whichever comes first. Each update re-scores the steps whose evidence changed: a new logged run, a new failure, or a change in how often the step runs.
+- A step that crosses the stability threshold is promoted to candidate status.
+- A step that stays a candidate for more than two calibration cycles without meeting all four signals is reviewed for re-scoping. Either it is judgment work that belongs with an agent, or the way it is scoped keeps it from stabilizing.
+- Each entry has its own next-review date or trigger. The next full review is 2026-12-25.
+- A converted step stays listed with its ADR, so the reason for the conversion and the edge cases it had to keep are not lost.
 
 Every step in the GIMPL workflow, sorted by who should do it: an agent, deterministic code, or a human. The steps were listed by walking `docs/orchestration-diagram.md` from the operator's task to the commit checkpoint, then adding the roles that run outside the team loop (demo-verifier, port-planner, trace-auditor) and the checks that are already code.
 
@@ -19,7 +25,7 @@ Recommendations use the fixed set: strong candidate, weak candidate, not a candi
 
 | Step | Who does it today | Recommendation |
 |---|---|---|
-| demo-verifier: standalone demo replay check | agent | **strong candidate** |
+| demo-verifier: standalone demo replay check | code since 2026-11-25 (was agent) | **converted** ([ADR-001](adr/ADR-001-demo-verifier-deterministic-conversion.md)) |
 | trace-auditor: reference-data drift audit | agent | weak candidate |
 | tester: run the task's checks after the implementer | agent | weak candidate |
 | fence-reviewer: scope and lesson review of the diff | agent | not a candidate as a whole role (see its entry) |
@@ -33,9 +39,15 @@ Recommendations use the fixed set: strong candidate, weak candidate, not a candi
 | Lane, decision-record, skill-file and memory-secret guards | code | already deterministic |
 | Evaluation harness, policy suite and CI gates | code | already deterministic |
 
-13 steps assessed, 1 strong candidate identified.
+13 steps assessed, 1 strong candidate identified and converted (demo-verifier, ADR-001).
 
 ## demo-verifier: standalone demo replay check
+
+- **Status: Converted to deterministic (ADR-001, 2026-11-25).** Decision record: [ADR-001](adr/ADR-001-demo-verifier-deterministic-conversion.md) (Accepted). Implementation: `scripts/verify_demos_deterministic.py`, unit tests in `eval/test_deterministic_step.py`, run by the Evaluation Harness CI job. The before and after measurements and the end-to-end regression check are in `docs/calibration-log.md`, Entry 2. The agent definition `.claude/agents/demo-verifier.md` was removed in the conversion commit, and the role is listed in `docs/governance-policy.md`, Deterministic conversion history. Rollback: revert the conversion commit (`refactor: integrate demo-verifier deterministic step, ...`), which restores the agent, its policy entry and its grants in one step.
+- **Edge cases kept by the script:** all three cases below are unit-tested in `eval/test_deterministic_step.py`: engine exit 255 is normal, a newer `src/chocolate-hexen` does not trigger a rebuild, and changes already in the tree before the check are reported as pre-existing instead of failing the run. The script adds one rule of its own: output it does not recognize is BLOCKED with the cause not guessed, where the agent would have read it with judgment.
+- **Next review:** 2026-12-25, or the first time the script returns BLOCKED with output it does not recognize, whichever comes first. A BLOCKED of that kind means the scripts changed their output and the parser needs updating, not that the agent should come back.
+
+The assessment that led to the conversion is kept below as it was scored.
 
 - **What it does:** on request ("Check the demos.") or after a change to `src/heretic/`, the build or a Rust port, it rebuilds `src/chocolate-heretic` only if a source file is newer, runs `scripts/demo-suite.sh` and the `scripts/demo1-check.sh` cross-check, and reports PASS, FAIL or BLOCKED with the scripts' lines quoted exactly, plus `git status --short`. It runs outside the Feature 1 team loop (`docs/routing-and-tool-grant-map.md`, Alternatives considered), and it was the regression task REG-01 in the Module 3 calibration cycle.
 - **Stability: met.** Iteration Log Run 1 (v0.1.0, 2026-11-02) scored 15/16 and Run 2 (v0.1.1, a16bca28) scored 16/16, both PASS against the threshold set before Run 1. The v0.2.0 verification run in `docs/iteration-log.md` ("Feature 1 Task 8", 2026-11-16) gave PASS from the suite with the cross-check agreeing. Calibration Log REG-01-r1 (commit A `4d53dc40`) and REG-01-r2 (commit C `432e6797`) both reported demos PASS at 4227 gametics. At C the only failing check was `cost` (57,626 tokens against a 51,200 budget). The REG-01-r1 `orchestrator_in_lane` FAIL was the main session's fault, not the verifier's.
@@ -54,6 +66,7 @@ Recommendations use the fixed set: strong candidate, weak candidate, not a candi
 - **Run rate: low.** It runs at pre-port checkpoints only, and no port has started since the role was added (2026-11-24).
 - **Known agent judgment / edge-case input:** a DRIFT finding when the operator says the trace is "stale". The agent refuses to propose regenerating the trace or editing the manifest (red-team prompt 9). A script would have to report DRIFT and stop, with no repair path.
 - **Recommendation: weak candidate.** Specifiable on paper but with one run and a low run rate. Reassess after a second logged run on the first Rust port.
+- **Candidate since:** 2026-11-25. **Next review:** after the second logged trace-auditor run (the first Rust port), or 2026-12-25, whichever comes first.
 
 ## tester: run the task's checks after the implementer
 
@@ -64,6 +77,7 @@ Recommendations use the fixed set: strong candidate, weak candidate, not a candi
 - **Run rate: high.** Every team task, plus each retry.
 - **Known agent judgment / edge-case input:** done criteria that name a check which is not `demo-suite.sh`, or a check that cannot run as written (no exec bit).
 - **Recommendation: weak candidate.** The repeated core is already code (`demo-suite.sh`). What the agent adds is reading each task's done criteria, which is not specifiable in advance.
+- **Candidate since:** 2026-11-25. **Next review:** 2026-12-25. Re-score if the done criteria start following a fixed template.
 
 ## fence-reviewer: scope and lesson review of the diff
 
@@ -74,6 +88,7 @@ Recommendations use the fixed set: strong candidate, weak candidate, not a candi
 - **Run rate: high.** Every team task, plus each retry.
 - **Known agent judgment / edge-case input:** which retrieved lesson applies to which hunk of the diff.
 - **Recommendation: not a candidate as a whole role.** Its structural path checks may be separable from the judgment half; that sub-step is assessed on its own in Lesson 4.3 Exercise 1.
+- **Next review:** with the Lesson 4.3 Exercise 1 assessment, then 2026-12-25.
 
 ## orchestrator: route, gate, loop or escalate
 
@@ -81,29 +96,34 @@ Recommendations use the fixed set: strong candidate, weak candidate, not a candi
 - **Signals:** stable in the routing checks after the fix at C (`orchestrator_in_lane` PASS on DEV-02-r3 and REG-01-r2), but not specifiable: deciding when a result meets its gate, and when to halt and escalate (the DEV-02-r3 brief misread it escalated), is judgment. Its lane limits are already enforced in code by `scripts/hooks/orchestrator-bash-guard.py`.
 - **Known agent judgment / edge-case input:** a subagent result that is formally complete but wrong for the task.
 - **Recommendation: not a candidate.**
+- **Next review:** 2026-12-25 (full review).
 
 ## planner: task to ordered plan with cited lessons
 
 - **Signals:** not specifiable. Breaking a task into steps, choosing files and picking which retrieved lessons apply is synthesis.
 - **Known agent judgment / edge-case input:** a task whose retrieved lessons conflict with the task text.
 - **Recommendation: not a candidate.**
+- **Next review:** 2026-12-25 (full review).
 
 ## implementer: make the planned change, store one lesson
 
 - **Signals:** not specifiable (it writes code and decides what lesson to store); HO-05 shows it can overreach (it wrote decision-007).
 - **Known agent judgment / edge-case input:** a plan step that is ambiguous about which file to change.
 - **Recommendation: not a candidate.**
+- **Next review:** 2026-12-25 (full review).
 
 ## port-planner: C function to Rust port spec
 
 - **Signals:** not specifiable (mapping C semantics to Rust is reasoning); one holdout run, HO-04.
 - **Known agent judgment / edge-case input:** C behavior that depends on undefined or platform-specific semantics.
 - **Recommendation: not a candidate.**
+- **Next review:** after the first Rust port has used it, or 2026-12-25.
 
 ## Advisory Code Review (CI `agent-review`)
 
 - **Signals:** no evidence. The job is advisory, and no key is set in `CI_REVIEWER_OPENROUTER_KEY`, so it has never produced a review. Code review is judgment.
 - **Recommendation: not a candidate.**
+- **Next review:** after the advisory reviewer has produced its first reviews, or 2026-12-25.
 
 ## Human steps
 
@@ -114,4 +134,5 @@ Plan approval, substitute-check approval, commit and merge approval, and any gol
 - `scripts/demo-suite.sh` and `scripts/demo1-check.sh`: demo replay, tic count and per-tic trace comparison (exit 0, 1 or 2).
 - `scripts/hooks/orchestrator-bash-guard.py`, `decision-write-guard.py`, `skill-file-guard.py` and `memory-secret-guard.py`, and `scripts/hooks/pre-commit`.
 - `scripts/run-agent.sh`: container permissions per role.
+- `scripts/verify_demos_deterministic.py`: the standalone demo check, converted from the demo-verifier agent (ADR-001). Listed in full above.
 - `eval/test_deterministic.py` (harness checks), `eval/test_policy.py` (policy suite), `scripts/check-pipeline-integrity.py`, `scripts/run-eval-gate.py` and `scripts/build-audit-trail.py` (CI gates and audit trail).
