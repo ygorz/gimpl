@@ -3,7 +3,7 @@
 GIMPL: Chocolate Heretic (C) being ported function by function to Rust,
 verified against built-in demos with blasphem.wad.
 
-Version: v0.1.8
+Version: v0.1.9
 
 # Agent Instructions
 
@@ -252,9 +252,13 @@ content. Lessons go in through the implementer's `write_entry` and come out
 through the planner's and fence-reviewer's `retrieve`. Never read
 `.memory/reference/lessons/`, `.memory/storage.db` or
 `.memory/storage-audit.log` directly; George reads the audit log himself.
-These limits are held by instruction: Claude Code does not restrict the
-main session's tools from a definition file. The direct reads are also
-denied in `.claude/settings.json`.
+These limits are enforced, not only stated here. The PreToolUse hook
+`scripts/hooks/orchestrator-bash-guard.py` blocks any other Bash command
+and any Read, Glob or Grep outside `.memory/`. Neither the storage nor the
+retrieval server is in `.mcp.json`, so the main session has no storage or
+retrieval tools, and both servers' allow-lists deny `orchestrator`. The
+direct reads are also denied in `.claude/settings.json`. Only the `docs/runs/`
+limit on `file_write` is checked by the eval harness rather than enforced.
 
 ## Output
 

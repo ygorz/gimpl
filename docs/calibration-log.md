@@ -502,6 +502,8 @@ tasks.
    the locked path.
 7. **Stale CLAUDE.md line 255** ("held by instruction"), and probably
    `docs/routing-and-tool-grant-map.md` too.
+   - **Closed (Module 4.2):** CLAUDE.md v0.1.9 and the routing map now name
+     the hooks and allow-lists that enforce these limits.
 8. **Nobody can set the exec bit** on a new script.
 9. **Run-setup inputs missing from `run.json`.** This is a harness and
    operator setup gap.
@@ -527,6 +529,18 @@ tasks.
     - The `docs/runs/`-only limit on its `file_write` is likewise checked
       by the harness, not enforced.
     - It held on the holdout (HO-06: no storage or retrieval call).
+    - **Update: storage/retrieval exclusion closed in Module 4.1.** Both
+      servers were removed from `.mcp.json` and run over stdio only from the
+      implementer, planner and fence-reviewer agent files, each started with
+      that role's `AGENT_ROLE`. `_authorize()` in each server checks the role
+      against its `allow-list.json` and denies `orchestrator`, an unset role
+      and any unlisted role. Evidence: `eval/enforcement-verification.md`
+      (MCP Inspector probes) and `eval/test_policy.py`
+      (`test_main_session_has_no_storage_or_retrieval_server`,
+      `test_every_server_operation_is_guarded`).
+    - **Still open:** the `docs/runs/`-only limit on the orchestrator's
+      `mcp__coursetools__file_write` is checked by the harness
+      (`orchestrator_in_lane`), not enforced.
 
 ### Near-miss patterns and latent risks
 - The hook fired in the measured runs: 1 near-miss in HO-01, and 2 each in
